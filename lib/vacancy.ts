@@ -71,23 +71,34 @@ export function normalizeDescricaoBullets(input: unknown): string[] {
   return [];
 }
 
-export function validateVacancy(input: any): void {
+export function validateVacancy(input: any, opts?: { partial?: boolean }): void {
   if (!input || typeof input !== "object") throw httpError("payload inválido", 400);
+  const partial = !!opts?.partial;
   const titulo = typeof input.titulo === "string" ? input.titulo.trim() : "";
-  if (!titulo) throw httpError("titulo obrigatório", 400);
-  if (!input.companyId || typeof input.companyId !== "string" || !input.companyId.trim()) {
-    throw httpError("companyId obrigatório", 400);
+  if (!partial) {
+    if (!titulo) throw httpError("titulo obrigatório", 400);
+    if (!input.companyId || typeof input.companyId !== "string" || !input.companyId.trim()) {
+      throw httpError("companyId obrigatório", 400);
+    }
+  } else {
+    if (input.titulo !== undefined && !titulo) throw httpError("titulo obrigatório", 400);
+    if (titulo.length > 120) throw httpError("titulo deve ter no máximo 120 caracteres", 400);
   }
   // stack opcional — se fornecido, deve ser array (mas vazio é ok)
   if (input.stack !== undefined && !Array.isArray(input.stack)) {
     throw httpError("stack deve ser array", 422);
   }
-  // faixa opcional — se fornecida, deve ser número
-  if (input.faixaDe !== undefined && input.faixaDe !== null && typeof input.faixaDe !== "number") {
+  // faixa opcional — se fornecida, deve ser número (rejeita NaN), e faixaDe <= faixaAte quando ambos numéricos
+  const hasDe = input.faixaDe !== undefined && input.faixaDe !== null;
+  const hasAte = input.faixaAte !== undefined && input.faixaAte !== null;
+  if (hasDe && (typeof input.faixaDe !== "number" || Number.isNaN(input.faixaDe))) {
     throw httpError("faixaDe deve ser número ou null", 422);
   }
-  if (input.faixaAte !== undefined && input.faixaAte !== null && typeof input.faixaAte !== "number") {
+  if (hasAte && (typeof input.faixaAte !== "number" || Number.isNaN(input.faixaAte))) {
     throw httpError("faixaAte deve ser número ou null", 422);
+  }
+  if (hasDe && hasAte && input.faixaDe > input.faixaAte) {
+    throw httpError("faixaDe não pode ser maior que faixaAte", 400);
   }
 }
 
@@ -102,6 +113,49 @@ export function canCreateForCompany(company: { validacaoStatus?: string } | null
   }
   // pendente e validado podem criar; pendente cria mas com validacao pendente (spec)
   return { allowed: true, status };
+}
+
+/** UTC start-of-day em ms — evita bug de timezone com setHours local. */
+export function utcDayStartMs(d: Date): number {
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/** Verifica se já foi renovada hoje (UTC) — idempotência por dia. */
+export function isAlreadyRenewedToday(
+  existing: { updatedAt?: Date | string | null; expiresAt: Date | string },
+  now: Date
+): boolean {
+  const nextExpiresAt = vacancyExpiresAt(now);
+  const lastRenewMs = existing.updatedAt ? new Date(existing.updatedAt as any).getTime() : 0;
+  const todayStartMs = utcDayStartMs(now);
+  return lastRenewMs >= todayStartMs && new Date(existing.expiresAt as any).getTime() === nextExpiresAt.getTime();
+}
+
+/**
+ * Helper compartilhado para renew idempotente (I2).
+ * Centraliza dedupe UTC + cálculo via renewVacancy.
+ * Retorna {alreadyRenewed, nextExpiresAt, renewed?}
+ */
+export function renewIdempotent(
+  existing: { expiresAt: Date | string; renovacoes?: number | null; status?: string; updatedAt?: Date | string | null; _lastRenewAt?: Date },
+  now: Date = new Date()
+): { alreadyRenewed: boolean; nextExpiresAt: Date; renewed?: VacancyPayload } {
+  const nextExpiresAt = vacancyExpiresAt(now);
+  if (isAlreadyRenewedToday(existing as any, now)) {
+    return { alreadyRenewed: true, nextExpiresAt };
+  }
+  const input: any = {
+    ...(existing as any),
+    expiresAt: new Date(existing.expiresAt as any),
+    renovacoes: (existing as any).renovacoes ?? 0,
+    status: (existing as any).status ?? "ativa",
+    _lastRenewAt: (existing as any)._lastRenewAt ?? ((existing as any).updatedAt ? new Date((existing as any).updatedAt) : undefined),
+  };
+  const renewed = renewVacancy(input, now);
+  if (renewed === input) {
+    return { alreadyRenewed: true, nextExpiresAt: new Date(existing.expiresAt as any) };
+  }
+  return { alreadyRenewed: false, nextExpiresAt: renewed.expiresAt, renewed };
 }
 
 export function buildVacancyPayload(input: any, now: Date = new Date()): VacancyPayload {

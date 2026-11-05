@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { renewVacancy, isVacancyExpired, validateVacancy, normalizeVacancyStack, normalizeDescricaoBullets } from "@/lib/vacancy";
+import { renewIdempotent, validateVacancy, normalizeVacancyStack, normalizeDescricaoBullets } from "@/lib/vacancy";
 import { vacancyExpiresAt } from "@/lib/hygiene";
 
 function parseIdFromUrl(req: NextRequest): string {
   const parts = new URL(req.url).pathname.split("/").filter(Boolean);
-  // .../api/vacancies/[id] or .../api/vacancies/[id]/renew
   const vacIdx = parts.indexOf("vacancies");
   if (vacIdx !== -1 && parts[vacIdx + 1]) return parts[vacIdx + 1];
   return "";
@@ -41,42 +40,25 @@ export async function PATCH(req: NextRequest, ctx?: { params: { id: string } }) 
     const { prisma } = await import("@/lib/prisma");
     const existing: any = await prisma.vacancy.findUnique({ where: { id } }).catch(() => null);
     if (!existing) {
-      // fallback sem DB: simula renew idempotente
       const now = new Date();
       const expiresAt = vacancyExpiresAt(now);
       return NextResponse.json({ id, expiresAt: expiresAt.toISOString(), renovacoes: 1, status: "ativa" }, { status: 200 });
     }
 
     const now = new Date();
-    const nextExpiresAt = vacancyExpiresAt(now);
-
-    // idempotência DB: se já foi renovado neste mesmo dia e expiresAt já é next, não incrementa de novo
-    // Heuristic: se updatedAt é hoje e expiresAt já equals next, retorna sem incrementar
-    const lastRenewMs = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-    const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
-    const alreadyRenewedToday = lastRenewMs >= todayStart.getTime() && new Date(existing.expiresAt).getTime() === nextExpiresAt.getTime();
-    if (alreadyRenewedToday) {
+    const { alreadyRenewed, renewed } = renewIdempotent(existing, now);
+    if (alreadyRenewed) {
       return NextResponse.json(
         { id: existing.id, expiresAt: new Date(existing.expiresAt).toISOString(), renovacoes: existing.renovacoes, status: existing.status },
         { status: 200 }
       );
     }
 
-    // usa helper renewVacancy para cálculo consistente (expiresAt +14d, renovacoes+1, ativa)
-    const helperInput: any = {
-      ...existing,
-      expiresAt: new Date(existing.expiresAt),
-      renovacoes: existing.renovacoes ?? 0,
-      status: existing.status,
-      _lastRenewAt: existing.updatedAt ? new Date(existing.updatedAt) : undefined,
-    };
-    const renewed = renewVacancy(helperInput, now);
-
     const updated = await prisma.vacancy.update({
       where: { id },
       data: {
-        expiresAt: renewed.expiresAt,
-        renovacoes: renewed.renovacoes,
+        expiresAt: renewed!.expiresAt,
+        renovacoes: renewed!.renovacoes,
         status: "ativa",
       },
     });
@@ -97,9 +79,16 @@ export async function PUT(req: NextRequest, ctx?: { params: { id: string } }) {
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: "payload inválido" }, { status: 400 }); }
 
-  // validação canônica parcial
-  if (body.titulo !== undefined && !String(body.titulo).trim()) {
-    return NextResponse.json({ error: "titulo obrigatório" }, { status: 400 });
+  // I4: validate faixa + titulo + partial canonical
+  try {
+    validateVacancy(body, { partial: true });
+  } catch (e: any) {
+    const status = e.status ?? e.statusCode ?? 400;
+    return NextResponse.json({ error: e.message }, { status });
+  }
+  if (body.titulo !== undefined) {
+    body.titulo = String(body.titulo).trim().slice(0, 120);
+    if (!body.titulo) return NextResponse.json({ error: "titulo obrigatório" }, { status: 400 });
   }
   if (body.stack !== undefined) {
     const ids = normalizeVacancyStack(body.stack);

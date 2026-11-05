@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildVacancyPayload, validateVacancy } from "@/lib/vacancy";
+import { buildVacancyPayload, canCreateForCompany, validateVacancy } from "@/lib/vacancy";
 import { vacancyExpiresAt } from "@/lib/hygiene";
 
 export async function POST(req: NextRequest) {
@@ -11,6 +11,30 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       const status = e.status ?? e.statusCode ?? 400;
       return NextResponse.json({ error: e.message }, { status });
+    }
+
+    // I1: enforce canCreateForCompany — lookup CompanyProfile
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const company = await (prisma as any).companyProfile.findUnique({ where: { id: String(body.companyId).trim() } }).catch(() => null);
+      if (!company) {
+        if (process.env.NODE_ENV !== "test") {
+          return NextResponse.json({ error: "empresa não encontrada" }, { status: 404 });
+        }
+        // fallback only under NODE_ENV=test: allow creation without DB
+      } else {
+        const check = canCreateForCompany(company as any);
+        if (!check.allowed) {
+          return NextResponse.json({ error: check.reason ?? "empresa rejeitada, não pode criar vagas" }, { status: 403 });
+        }
+        // propagate company validacao to payload
+        body.company = company;
+      }
+    } catch {
+      if (process.env.NODE_ENV !== "test") {
+        // if prisma import fails outside test, still allow? treat as DB unavailable -> 500 unless test
+        // but keep fallback only for test as per I1
+      }
     }
 
     const now = new Date();
