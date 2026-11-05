@@ -1,0 +1,217 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ── Enums ──────────────────────────────────────────────────────────────
+enum CandidateStatus {
+  ativo
+  arquivado
+  purgado
+}
+
+enum VacancyStatus {
+  ativa
+  arquivada
+}
+
+enum ApplicationOrigin {
+  candidaturaLote
+  contatoLote
+  swipe
+}
+
+enum ApplicationStatus {
+  enviado
+  visualizado
+  respondido
+  arquivado
+}
+
+enum ValidationStatus {
+  pendente
+  validado
+  rejeitado
+}
+
+enum PlanType {
+  free
+  pro
+}
+
+// ── CompanyProfile ───────────────────────────────────────────────────
+model CompanyProfile {
+  id               String           @id @default(cuid())
+  nome             String
+  cnpj             String?          @unique
+  logoUrl          String?
+  site             String?
+  validacaoStatus  ValidationStatus @default(pendente)
+  validacaoData    DateTime?
+  vagasAtivasCount Int              @default(0)
+  plano            PlanType         @default(free)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  vacancies        Vacancy[]
+  applications     Application[]
+}
+
+// ── CandidateProfile ─────────────────────────────────────────────────
+model CandidateProfile {
+  id                  String          @id @default(cuid())
+  userId              String          @unique
+  nome                String
+  fotoUrl             String?
+  titulo              String
+  resumo3linhas       String?
+  localidade          String?
+  modo                String? // remoto | hibrido | presencial
+  regimePreferido     String[]        @default([])
+  pretensaoDe         Int?
+  pretensaoAte        Int?
+  pretensaoMoeda      String?         @default("BRL")
+  disponibilidade     String?
+  objetivoCrescimento String
+  stack               Json            @default("[]") // [{skillId, nivel, anos}]
+  experiencias        Json            @default("[]")
+  formacao            Json            @default("[]")
+  idiomas             Json            @default("[]")
+  links               Json            @default("[]")
+
+  // contato
+  celular     String // E.164 obrigatório
+  email       String
+  whatsappOpt Boolean @default(false)
+  telegramOpt Boolean @default(false)
+  telefoneOpt String?
+
+  // LGPD 4 consentimentos versionados
+  tratamentoBuscaV Int      @default(1)
+  contatoProxyV    Int      @default(1)
+  nudgesV          Int      @default(1)
+  iaReescritaV     Int      @default(1)
+  consentTexts     Json     @default("[]") // textos originais consentidos
+
+  status         CandidateStatus @default(ativo)
+  idiomaOriginal String          @default("pt-BR")
+
+  // higiene
+  expiresAt DateTime // now + 180d
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // busca
+  searchVector Unsupported("tsvector")?
+  embedding    Unsupported("vector(1024)")?
+
+  consentLogs  ConsentLog[]
+  applications Application[]
+
+  @@index([status])
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+// ── Vacancy ──────────────────────────────────────────────────────────
+model Vacancy {
+  id               String        @id @default(cuid())
+  companyId        String
+  company          CompanyProfile @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  titulo           String
+  stack            Json          @default("[]") // [{skillId}]
+  nivel            String?
+  regime           String?
+  localidade       String?
+  faixaDe          Int?
+  faixaAte         Int?
+  faixaMoeda       String?       @default("BRL")
+  descricaoBullets Json          @default("[]")
+  beneficios       Json          @default("[]")
+  tipoContrato     String?
+  expiresAt        DateTime
+  renovacoes       Int           @default(0)
+  views            Int           @default(0)
+  candidaturasCount Int          @default(0)
+  status           VacancyStatus @default(ativa)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  searchVector Unsupported("tsvector")?
+  embedding    Unsupported("vector(1024)")?
+
+  applications Application[]
+
+  @@index([status])
+  @@index([expiresAt])
+  @@index([companyId])
+}
+
+// ── Application ──────────────────────────────────────────────────────
+model Application {
+  id             String            @id @default(cuid())
+  vacancyId      String?
+  vacancy        Vacancy?          @relation(fields: [vacancyId], references: [id], onDelete: SetNull)
+  candidateId    String
+  candidate      CandidateProfile  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  companyId      String
+  company        CompanyProfile    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  origem         ApplicationOrigin
+  proxyThreadId  String            @unique
+  status         ApplicationStatus @default(enviado)
+  loteId         String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([candidateId, vacancyId])
+  @@index([candidateId])
+  @@index([vacancyId])
+  @@index([companyId])
+  @@index([loteId])
+}
+
+// ── OtpCode ──────────────────────────────────────────────────────────
+model OtpCode {
+  id         String   @id @default(cuid())
+  userId     String // celular E.164
+  codigoHash String
+  codigo     String? // only for testing/debug, not in prod — kept hashed normally
+  expiraEm   DateTime
+  tentativas Int      @default(0)
+  bloqueioAte DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiraEm])
+}
+
+// ── ConsentLog ───────────────────────────────────────────────────────
+model ConsentLog {
+  id        String   @id @default(cuid())
+  userId    String
+  candidate CandidateProfile? @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  versao    Int
+  tipo      String // tratamentoBusca | contatoProxy | nudges | iaReescrita
+  texto     String   @db.Text
+  baseLegal String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ── HygieneEvent (idempotência nudges) ──────────────────────────────
+model HygieneEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  marco     String // D150 | D165 | D175 | D180 | V_D12 | V_D14
+  date      String // YYYY-MM-DD for dedupe per day
+  createdAt DateTime @default(now())
+
+  @@unique([userId, marco, date])
+  @@index([userId])
+}
