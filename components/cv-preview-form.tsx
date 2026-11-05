@@ -7,9 +7,16 @@ export type CvDraftForm = {
   titulo: string;
   resumo3linhas?: string;
   localidade?: string;
+  celular: string;
   objetivoCrescimento: string;
   stack: StackItem[];
 };
+
+function isValidCelularBRPreview(v: string): boolean {
+  const d = v.replace(/\D/g, "");
+  const norm = d.startsWith("55") && d.length >= 12 ? "+" + d : d.length >= 10 ? "+55" + d : "+" + d;
+  return /^\+55\d{10,11}$/.test(norm);
+}
 
 export function CvPreviewForm({
   initialDraft,
@@ -24,7 +31,6 @@ export function CvPreviewForm({
   const [publishing, setPublishing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // 1 tela editável — todos os campos na mesma tela
   const updateField = (field: keyof CvDraftForm, value: any) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
   };
@@ -54,6 +60,14 @@ export function CvPreviewForm({
     }
     if (draft.objetivoCrescimento.trim().length < 10) {
       setError("objetivoCrescimento muito curto (mín 10 caracteres)");
+      return;
+    }
+    if (!draft.celular?.trim()) {
+      setError("celular obrigatório (E.164 BR, ex: +55 11 99999-9999)");
+      return;
+    }
+    if (!isValidCelularBRPreview(draft.celular)) {
+      setError("celular inválido, use formato E.164 BR (+55 DDD 9xxxx-xxxx)");
       return;
     }
     try {
@@ -91,6 +105,18 @@ export function CvPreviewForm({
           value={draft.localidade ?? ""}
           onChange={(e) => updateField("localidade", e.target.value)}
           placeholder="São Paulo / remoto"
+        />
+      </label>
+
+      <label>
+        Celular * (E.164 BR, obrigatório)
+        <input
+          aria-label="celular"
+          value={draft.celular ?? ""}
+          onChange={(e) => updateField("celular", e.target.value)}
+          placeholder="+55 11 99999-9999"
+          required
+          inputMode="tel"
         />
       </label>
 

@@ -9,7 +9,8 @@ export const EMBEDDING_MODEL = "multilingual-e5-large";
 
 /**
  * Gera embedding para texto. Stub retorna vetor zero 1024.
- * Implementação real chamará OmniRoute em Task 3/5.
+ * TODO(Task 5): substituir stub por chamada real OmniRoute multilingual-e5
+ * search (hybrid pgvector + tsvector) depende de embedding real — ver Task 5.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   void text;

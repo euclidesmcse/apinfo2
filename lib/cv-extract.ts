@@ -7,6 +7,7 @@
  */
 import { normalizeSkill, getSkill, SKILLS } from "./taxonomy";
 import { generateEmbedding, EMBEDDING_DIM } from "./embeddings";
+import { normalizeCelular, isValidCelularBR } from "./auth";
 
 export const FALLBACK_WARNING = "não foi possível extrair, preencha manual";
 export const MIN_TEXT_LENGTH = 30;
@@ -26,7 +27,10 @@ export type CvDraft = {
   formacao?: any[];
   idiomas?: any[];
   links?: any[];
+  /** Celular obrigatório E.164 BR (+55...), extraído do CV ou preenchido no preview. */
+  celular: string;
   contato?: { celular?: string; email?: string };
+  email?: string;
   idiomaOriginal?: string;
 };
 
@@ -49,6 +53,7 @@ export function emptyDraft(): CvDraft {
     resumo3linhas: "",
     localidade: "",
     objetivoCrescimento: "",
+    celular: "",
     stack: [],
     experiencias: [],
     formacao: [],
@@ -140,6 +145,34 @@ function extractLocalidade(text: string): string {
   return m ? m[0] : "";
 }
 
+export function extractCelular(text: string): string {
+  if (!text) return "";
+  // Regex E.164 BR flexível: +55 (11) 9 9999-9999, 11 99999-9999, etc. Normaliza via auth helper
+  // Prioriza matches que contenham +55 ou 11 dígitos BR
+  const candidates: string[] = [];
+  // E.164 explícito
+  const e164 = text.match(/\+55\s?\(?\d{2}\)?\s?\d{4,5}[-.\s]?\d{4}/g);
+  if (e164) candidates.push(...e164);
+  // formato nacional (11) 9xxxx-xxxx ou 9xxxx-xxxx
+  if (candidates.length === 0) {
+    const nacional = text.match(/\(?\d{2}\)?\s?9\d{4}[-.\s]?\d{4}/g);
+    if (nacional) candidates.push(...nacional);
+  }
+  for (const raw of candidates) {
+    const norm = normalizeCelular(raw);
+    if (isValidCelularBR(norm)) return norm;
+  }
+  // último fallback: procura qualquer sequência de 10-11 dígitos com 9 no início do número
+  const digitsOnly = text.match(/\d{10,13}/g);
+  if (digitsOnly) {
+    for (const d of digitsOnly) {
+      const norm = normalizeCelular(d);
+      if (isValidCelularBR(norm)) return norm;
+    }
+  }
+  return "";
+}
+
 /**
  * Core: transforma raw text em draft canônico.
  * LGPD: iaReescritaV obrigatório true, senão 400/403.
@@ -174,6 +207,7 @@ export async function extractToCanonical(
 
   const resumoMatch = trimmed.match(/resumo\s*:?\s*([^\n]+)/i);
   const resumo3linhas = resumoMatch ? resumoMatch[1].trim().slice(0, 300) : trimmed.slice(0, 300).replace(/\s+/g, " ").trim();
+  const celular = extractCelular(trimmed);
 
   const draft: CvDraft = {
     titulo: titulo || "Profissional de TI",
@@ -181,6 +215,7 @@ export async function extractToCanonical(
     localidade,
     modo: /remoto/i.test(trimmed) ? "remoto" : undefined,
     objetivoCrescimento, // pode ficar vazio — validateForPublish exigirá
+    celular,
     stack,
     experiencias: [],
     formacao: [],
@@ -203,6 +238,18 @@ export function validateForPublish(draft: CvDraft): void {
   if (obj.length < 10) {
     throw httpError("objetivoCrescimento muito curto (mín 10 caracteres)", 400);
   }
+  // C1: celular obrigatório E.164 BR
+  const rawCelular = (draft.celular ?? draft.contato?.celular ?? "").toString().trim();
+  if (!rawCelular) {
+    throw httpError("celular obrigatório (E.164 BR) para publicar CV canônico", 400);
+  }
+  const norm = normalizeCelular(rawCelular);
+  if (!isValidCelularBR(norm)) {
+    throw httpError("celular inválido, use formato E.164 BR (+55...)", 400);
+  }
+  // normaliza in-place para downstream
+  (draft as any).celular = norm;
+  if (draft.contato) draft.contato.celular = norm;
 }
 
 /**
