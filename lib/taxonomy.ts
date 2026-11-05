@@ -124,8 +124,8 @@ export const SKILLS: SkillDef[] = [
   { id: "django", label: "Django", synonyms: [], category: "backend" },
   { id: "flask", label: "Flask", synonyms: [], category: "backend" },
   { id: "fastapi", label: "FastAPI", synonyms: [], category: "backend" },
-  { id: "spring", label: "Spring", synonyms: ["spring boot", "springboot"], category: "backend" },
-  { id: "spring-boot", label: "Spring Boot", synonyms: ["springboot"], category: "backend" },
+  { id: "spring", label: "Spring", synonyms: [], category: "backend" },
+  { id: "spring-boot", label: "Spring Boot", synonyms: ["springboot", "spring boot"], category: "backend" },
   { id: "quarkus", label: "Quarkus", synonyms: [], category: "backend" },
   { id: "micronaut", label: "Micronaut", synonyms: [], category: "backend" },
   { id: "laravel", label: "Laravel", synonyms: [], category: "backend" },
@@ -246,9 +246,9 @@ export const SKILLS: SkillDef[] = [
   { id: "linux", label: "Linux", synonyms: [], category: "devops" },
   { id: "windows-server", label: "Windows Server", synonyms: [], category: "devops" },
   { id: "macos", label: "macOS", synonyms: ["osx"], category: "devops" },
-  { id: "bash-devops", label: "Bash", synonyms: ["shell"], category: "devops" },
-  { id: "powershell-devops", label: "PowerShell", synonyms: ["pwsh"], category: "devops" },
-  { id: "makefile", label: "Makefile", synonyms: ["make"], category: "devops" },
+  { id: "bash-devops", label: "Bash (DevOps)", synonyms: [], category: "devops" },
+  { id: "powershell-devops", label: "PowerShell (DevOps)", synonyms: [], category: "devops" },
+  { id: "makefile", label: "Makefile", synonyms: [], category: "devops" },
   { id: "gradle", label: "Gradle", synonyms: [], category: "devops" },
   { id: "maven", label: "Maven", synonyms: [], category: "devops" },
   { id: "ant", label: "Ant", synonyms: [], category: "devops" },
@@ -267,7 +267,7 @@ export const SKILLS: SkillDef[] = [
   { id: "couchbase", label: "Couchbase", synonyms: [], category: "database" },
   { id: "neo4j", label: "Neo4j", synonyms: [], category: "database" },
   { id: "arangodb", label: "ArangoDB", synonyms: [], category: "database" },
-  { id: "dynamodb-db", label: "DynamoDB", synonyms: ["dynamodb"], category: "database" },
+  { id: "dynamodb-db", label: "DynamoDB (DB)", synonyms: [], category: "database" },
   { id: "elasticsearch", label: "Elasticsearch", synonyms: ["elastic"], category: "database" },
   { id: "opensearch", label: "OpenSearch", synonyms: [], category: "database" },
   { id: "solr", label: "Solr", synonyms: [], category: "database" },
@@ -286,7 +286,7 @@ export const SKILLS: SkillDef[] = [
   { id: "timescaledb", label: "TimescaleDB", synonyms: [], category: "database" },
   { id: "cockroachdb", label: "CockroachDB", synonyms: [], category: "database" },
   { id: "planetscale", label: "PlanetScale", synonyms: [], category: "database" },
-  { id: "supabase-db", label: "Supabase", synonyms: ["supabase"], category: "database" },
+  { id: "supabase-db", label: "Supabase (DB)", synonyms: [], category: "database" },
   { id: "faunadb", label: "FaunaDB", synonyms: ["fauna"], category: "database" },
   { id: "prisma-orm", label: "Prisma", synonyms: ["prisma"], category: "database" },
   { id: "typeorm", label: "TypeORM", synonyms: [], category: "database" },
@@ -325,8 +325,8 @@ export const SKILLS: SkillDef[] = [
   { id: "jupyter", label: "Jupyter", synonyms: [], category: "data" },
   { id: "mlflow", label: "MLflow", synonyms: [], category: "data" },
   { id: "kubeflow", label: "Kubeflow", synonyms: [], category: "data" },
-  { id: "airflow-data", label: "Airflow", synonyms: ["airflow"], category: "data" },
-  { id: "snowflake-data", label: "Snowflake", synonyms: ["snowflake"], category: "data" },
+  { id: "airflow-data", label: "Airflow (Data)", synonyms: [], category: "data" },
+  { id: "snowflake-data", label: "Snowflake (Data)", synonyms: [], category: "data" },
   { id: "databricks", label: "Databricks", synonyms: [], category: "data" },
   { id: "pinecone", label: "Pinecone", synonyms: [], category: "data" },
   { id: "weaviate", label: "Weaviate", synonyms: [], category: "data" },
@@ -380,7 +380,7 @@ export const SKILLS: SkillDef[] = [
   { id: "keycloak", label: "Keycloak", synonyms: [], category: "security" },
   { id: "auth0", label: "Auth0", synonyms: [], category: "security" },
   { id: "okta", label: "Okta", synonyms: [], category: "security" },
-  { id: "vault-security", label: "HashiCorp Vault", synonyms: ["vault"], category: "security" },
+  { id: "vault-security", label: "HashiCorp Vault (Security)", synonyms: [], category: "security" },
   { id: "snyk", label: "Snyk", synonyms: [], category: "security" },
   { id: "sonarqube", label: "SonarQube", synonyms: ["sonar"], category: "security" },
   { id: "owasp", label: "OWASP", synonyms: [], category: "security" },
@@ -466,7 +466,7 @@ export const SKILLS: SkillDef[] = [
   { id: "pega", label: "Pega", synonyms: [], category: "erp" },
   { id: "sharepoint", label: "SharePoint", synonyms: [], category: "erp" },
   { id: "office365", label: "Office 365", synonyms: ["o365", "m365"], category: "erp" },
-  { id: "sap-abap", label: "SAP ABAP", synonyms: ["abap"], category: "erp" },
+  { id: "sap-abap", label: "SAP ABAP (ERP)", synonyms: [], category: "erp" },
   { id: "sap-fiori", label: "SAP Fiori", synonyms: ["fiori"], category: "erp" },
   { id: "hubspot", label: "HubSpot", synonyms: [], category: "erp" },
 
@@ -508,34 +508,83 @@ export const SKILLS: SkillDef[] = [
   { id: "web3js", label: "web3.js", synonyms: ["web3js"], category: "blockchain" },
 ];
 
-// Validação: deve ter ~500 (ajuste com padding se necessário via geração)
-// Adiciona padding automático se <500
-const EXTRA: SkillDef[] = [];
+// Curated extras to reach 500 real IT skills (no placeholders)
+// Covers gaps: additional Cloud/DevOps/Data/Security/Product skills that exist in market
+const CURATED_EXTRA: SkillDef[] = [
+  // Cloud & Infra extras (7)
+  { id: "cloudflare-workers", label: "Cloudflare Workers", synonyms: [], category: "cloud" },
+  { id: "cloudflare-r2", label: "Cloudflare R2", synonyms: ["r2"], category: "cloud" },
+  { id: "aws-cdk", label: "AWS CDK", synonyms: ["cdk"], category: "cloud" },
+  { id: "crossplane", label: "Crossplane", synonyms: [], category: "cloud" },
+  { id: "backstage", label: "Backstage", synonyms: [], category: "cloud" },
+  { id: "teleport", label: "Teleport", synonyms: [], category: "cloud" },
+  { id: "tailscale", label: "Tailscale", synonyms: [], category: "cloud" },
+  // DevOps extras (6)
+  { id: "buildkite", label: "Buildkite", synonyms: [], category: "devops" },
+  { id: "drone-ci", label: "Drone CI", synonyms: ["drone"], category: "devops" },
+  { id: "harness", label: "Harness", synonyms: [], category: "devops" },
+  { id: "spinnaker", label: "Spinnaker", synonyms: [], category: "devops" },
+  { id: "arthas", label: "Arthas", synonyms: [], category: "devops" },
+  { id: "earthly", label: "Earthly", synonyms: [], category: "devops" },
+  // Data / AI extras (6)
+  { id: "dbt-core", label: "dbt Core", synonyms: ["dbt core"], category: "data" },
+  { id: "great-expectations", label: "Great Expectations", synonyms: [], category: "data" },
+  { id: "feast", label: "Feast", synonyms: [], category: "data" },
+  { id: "ray", label: "Ray", synonyms: [], category: "data" },
+  { id: "trino", label: "Trino", synonyms: ["presto"], category: "data" },
+  { id: "duckdb", label: "DuckDB", synonyms: [], category: "data" },
+  // Security extras (4)
+  { id: "wazuh", label: "Wazuh", synonyms: [], category: "security" },
+  { id: "osquery", label: "osquery", synonyms: [], category: "security" },
+  { id: "sops", label: "SOPS", synonyms: [], category: "security" },
+  { id: "step-ca", label: "step-ca", synonyms: ["step ca"], category: "security" },
+  // Produto / QA extras (6)
+  { id: "linear", label: "Linear", synonyms: [], category: "produto" },
+  { id: "height", label: "Height", synonyms: [], category: "produto" },
+  { id: "posthog", label: "PostHog", synonyms: [], category: "produto" },
+  { id: "launchdarkly", label: "LaunchDarkly", synonyms: [], category: "produto" },
+  { id: "playwright-test", label: "Playwright Test", synonyms: [], category: "qa" },
+  { id: "k6-cloud", label: "k6 Cloud", synonyms: [], category: "qa" },
+];
+const EXTRA: SkillDef[] = [...CURATED_EXTRA];
 const baseCount = SKILLS.length;
-// Gera extras genéricos para atingir 500 sem quebrar unicidade
-const extraNeeded = 500 - baseCount;
-for (let i = 0; i < extraNeeded; i++) {
-  EXTRA.push({
-    id: `skill-extra-${String(i + 1).padStart(3, "0")}`,
-    label: `Skill Extra ${i + 1}`,
-    synonyms: [],
-    category: "extra",
-  });
+// If still <500 after curated extras, fail loudly — do not generate placeholders
+const extraNeeded = 500 - (baseCount + CURATED_EXTRA.length);
+if (extraNeeded > 0) {
+  throw new Error(
+    `[taxonomy] precisa de mais ${extraNeeded} skills reais para atingir 500 (base ${baseCount} + curated ${CURATED_EXTRA.length} = ${baseCount + CURATED_EXTRA.length}). Não usar placeholders.`
+  );
 }
 if (EXTRA.length > 0) SKILLS.push(...EXTRA);
 
 // ── Índices ───────────────────────────────────────────────────────────
 const byId = new Map<string, SkillDef>(SKILLS.map((s) => [s.id, s]));
 const synonymToId = new Map<string, string>();
+// Collect synonym collisions for deterministic precedence (first wins) + warning
+const synonymCollisions: Array<{ key: string; kept: string; dropped: string }> = [];
 
 for (const skill of SKILLS) {
-  synonymToId.set(skill.id.toLowerCase(), skill.id);
-  synonymToId.set(skill.label.toLowerCase(), skill.id);
+  for (const k of [skill.id.toLowerCase(), skill.label.toLowerCase()]) {
+    if (!synonymToId.has(k)) synonymToId.set(k, skill.id);
+    else if (synonymToId.get(k) !== skill.id)
+      synonymCollisions.push({ key: k, kept: synonymToId.get(k)!, dropped: skill.id });
+  }
   for (const syn of skill.synonyms) {
     const k = syn.toLowerCase().trim();
-    if (k && !synonymToId.has(k)) synonymToId.set(k, skill.id);
+    if (!k) continue;
+    if (!synonymToId.has(k)) synonymToId.set(k, skill.id);
+    else if (synonymToId.get(k) !== skill.id)
+      synonymCollisions.push({ key: k, kept: synonymToId.get(k)!, dropped: skill.id });
   }
 }
+if (synonymCollisions.length > 0) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[taxonomy] ${synonymCollisions.length} colisão(ões) de sinônimo (first wins):`,
+    synonymCollisions.slice(0, 20)
+  );
+}
+export const TAXONOMY_COLLISIONS = synonymCollisions;
 
 // ── API ───────────────────────────────────────────────────────────────
 /**

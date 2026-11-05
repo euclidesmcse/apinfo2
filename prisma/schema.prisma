@@ -153,6 +153,13 @@ model Vacancy {
 }
 
 // ── Application ──────────────────────────────────────────────────────
+// vacancyId nullable: suporta "Contact" (contato direto sem vaga) conforme spec §5.4 (vacancyId?).
+// ATENÇÃO Postgres: @@unique com nullable permite duplicatas (NULL != NULL). Correção:
+// - Mantém @@unique para caso vacancyId NOT NULL (Postgres unique comporta non-null)
+// - Migration SQL adicional cria partial unique index: CREATE UNIQUE INDEX ... WHERE vacancyId IS NOT NULL
+//   Ver prisma/migrations/*_fix_application_unique/migration.sql
+// - Aplicação deve dedupar em código: verificar existência antes de criar quando vacancyId != null
+// Alternativa (se quiser normalizar): separar em modelos Application (vacancyId required) + Contact (sem vacancyId).
 model Application {
   id             String            @id @default(cuid())
   vacancyId      String?

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { SKILLS, normalizeSkill } from "../lib/taxonomy";
+import { SKILLS, normalizeSkill, TAXONOMY_COLLISIONS } from "../lib/taxonomy";
 import { EMBEDDING_DIM, generateEmbedding } from "../lib/embeddings";
 
 describe("Taxonomy — 500 skills + sinônimos", () => {
@@ -29,6 +29,25 @@ describe("Taxonomy — 500 skills + sinônimos", () => {
       expect(s.label).toBeTruthy();
       expect(s.category).toBeTruthy();
     }
+  });
+
+  it("sem placeholders: 500 skills reais (sem category extra nem skill-extra-*)", () => {
+    expect(SKILLS.filter((s) => s.category === "extra").length).toBe(0);
+    expect(SKILLS.filter((s) => s.id.startsWith("skill-extra")).length).toBe(0);
+  });
+
+  it("colisões de sinônimo: apenas duplicatas across-skills, precedence determinística (first wins)", () => {
+    // TAXONOMY_COLLISIONS deve existir e conter apenas colisões reais cross-skill
+    expect(Array.isArray(TAXONOMY_COLLISIONS)).toBe(true);
+    // shell/make não devem colidir após dedupe (bash-devops/makefile sem sinônimos shadowing)
+    expect(normalizeSkill("shell")).toBe("shell");
+    expect(normalizeSkill("make")).toBe("make");
+    expect(normalizeSkill("bash")).toBe("shell");
+    expect(normalizeSkill("makefile")).toBe("makefile");
+    expect(normalizeSkill("pwsh")).toBe("powershell");
+    // senhas conhecidas
+    expect(normalizeSkill("spring boot")).toBe("spring-boot");
+    expect(normalizeSkill("springboot")).toBe("spring-boot");
   });
 });
 
@@ -84,12 +103,27 @@ describe("Prisma schema — estrutura canônica", () => {
     expect(schema).toMatch(/expiresAt/);
   });
 
-  it("Application: proxyThreadId, origem enum, status enum, loteId, unique candidate+vacancy", () => {
+  it("Application: proxyThreadId, origem enum, status enum, loteId, unique candidate+vacancy + partial index note", () => {
     expect(schema).toMatch(/proxyThreadId/);
     expect(schema).toMatch(/ApplicationOrigin/);
     expect(schema).toMatch(/ApplicationStatus/);
     expect(schema).toMatch(/loteId/);
     expect(schema).toMatch(/@@unique\(\[candidateId,\s*vacancyId\]\)/);
+    // C1: documenta partial unique index
+    expect(schema).toMatch(/partial unique/i);
+    // Migration SQL existe
+    const migrationPath = path.join(__dirname, "../prisma/migrations/20251107_fix_application_partial_unique/migration.sql");
+    expect(fs.existsSync(migrationPath)).toBe(true);
+    const migration = fs.readFileSync(migrationPath, "utf-8");
+    expect(migration).toMatch(/WHERE.*vacancyId.*IS NOT NULL/);
+  });
+
+  it("hygiene helpers: expiresAt defaults existem (C2)", () => {
+    const hygieneSrc = fs.readFileSync(path.join(__dirname, "../lib/hygiene.ts"), "utf-8");
+    expect(hygieneSrc).toMatch(/vacancyExpiresAt/);
+    expect(hygieneSrc).toMatch(/candidateExpiresAt/);
+    // schema exige expiresAt sem default -> deve usar helper
+    expect(schema).toMatch(/expiresAt\s+DateTime/);
   });
 
   it("OtpCode: expiraEm, tentativas, bloqueio", () => {
