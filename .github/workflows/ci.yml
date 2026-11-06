@@ -1,0 +1,27 @@
+name: CI — build + testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # grátis para repo público — zero custo
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/w2talent?sslmode=disable' }}
+      JWT_SECRET: dummy-ci-jwt
+      CRON_SECRET: dummy-ci-cron
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm test -- --runInBand
+      - run: npm run build
+      # preview URL só aparece se Vercel estiver conectado — sem custo extra
