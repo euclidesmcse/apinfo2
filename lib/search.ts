@@ -442,12 +442,9 @@ export async function searchVacancies(params: SearchParams, dataSource?: any[]):
   // attempt prisma query if available
   try {
     const { prisma } = await import("./prisma");
-    // actual query would be raw: prisma.$queryRaw with ts_rank + vector
-    // for MVP without DB, fallback to empty result with suggestion handling
     const where: any = { status: "ativa" };
     if (params.regime) where.regime = { contains: params.regime, mode: "insensitive" };
     if (params.localidade) where.localidade = { contains: params.localidade, mode: "insensitive" };
-    // faixa null hide: don't filter out null faixa
     const items: any[] = await (prisma as any).vacancy
       .findMany({
         where,
@@ -456,6 +453,22 @@ export async function searchVacancies(params: SearchParams, dataSource?: any[]):
         take: pageSize,
       })
       .catch(() => []);
+    // DEMO fallback: se DB vazio mas vacancyStore tem dados (staging sem Postgres), usa in-memory
+    if (items.length === 0) {
+      try {
+        const { vacancyStore } = await import("./proxy");
+        if (vacancyStore.size > 0) {
+          const demoItems = [...vacancyStore.values()] as any[];
+          return hybridSearch(q, demoItems, {
+            buildText: buildTsvectorTextVacancy,
+            getStack: (v) => v.stack ?? [],
+            filters: params,
+            page,
+            pageSize,
+          });
+        }
+      } catch {}
+    }
     if (items.length === 0 && q) {
       const suggestion = suggestCorrection(q);
       return {
@@ -469,7 +482,6 @@ export async function searchVacancies(params: SearchParams, dataSource?: any[]):
         tookMs: 5,
       };
     }
-    // if we have items but q present, rank in-memory
     if (q && items.length > 0) {
       return hybridSearch(q, items, {
         buildText: buildTsvectorTextVacancy,
@@ -481,7 +493,20 @@ export async function searchVacancies(params: SearchParams, dataSource?: any[]):
     }
     return { items, total: items.length, page, pageSize, totalPages: Math.ceil(items.length / pageSize) || 1, suggestion: null, emptyCTA: null, tookMs: 5 };
   } catch {
-    // no DB: return empty with suggestion if typo, else empty
+    // no DB: tenta demo store antes de retornar vazio
+    try {
+      const { vacancyStore } = await import("./proxy");
+      if (vacancyStore.size > 0) {
+        const demoItems = [...vacancyStore.values()] as any[];
+        return hybridSearch(q, demoItems, {
+          buildText: buildTsvectorTextVacancy,
+          getStack: (v) => v.stack ?? [],
+          filters: params,
+          page,
+          pageSize,
+        });
+      }
+    } catch {}
     if (q) {
       const suggestion = suggestCorrection(q);
       return {
@@ -529,6 +554,21 @@ export async function searchCandidates(params: SearchParams, dataSource?: any[])
     const items: any[] = await (prisma as any).candidateProfile
       .findMany({ where, orderBy: { updatedAt: "desc" }, skip: offset, take: pageSize })
       .catch(() => []);
+    if (items.length === 0) {
+      try {
+        const { candidateStore } = await import("./proxy");
+        if (candidateStore.size > 0) {
+          const demoItems = [...candidateStore.values()] as any[];
+          return hybridSearch(q, demoItems, {
+            buildText: buildTsvectorTextCandidate,
+            getStack: (c) => c.stack ?? [],
+            filters: params,
+            page,
+            pageSize,
+          });
+        }
+      } catch {}
+    }
     if (q && items.length > 0) {
       return hybridSearch(q, items, {
         buildText: buildTsvectorTextCandidate,
@@ -544,6 +584,19 @@ export async function searchCandidates(params: SearchParams, dataSource?: any[])
     }
     return { items, total: items.length, page, pageSize, totalPages: Math.ceil(items.length / pageSize) || 1, suggestion: null, emptyCTA: null, tookMs: 5 };
   } catch {
+    try {
+      const { candidateStore } = await import("./proxy");
+      if (candidateStore.size > 0) {
+        const demoItems = [...candidateStore.values()] as any[];
+        return hybridSearch(q, demoItems, {
+          buildText: buildTsvectorTextCandidate,
+          getStack: (c) => c.stack ?? [],
+          filters: params,
+          page,
+          pageSize,
+        });
+      }
+    } catch {}
     if (q) {
       const suggestion = suggestCorrection(q);
       return { items: [], total: 0, page, pageSize, totalPages: 1, suggestion, emptyCTA: buildEmptyCTA(suggestion), tookMs: 2 };
