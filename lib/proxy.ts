@@ -68,6 +68,18 @@ export const sentEmails: Array<{
   attachments: Array<{ filename: string; content: Buffer | string }>;
   candidateId: string;
   vacancyId: string;
+  companyId?: string;
+  origem?: ApplicationOrigin;
+}> = [];
+
+export const consentLogs: Array<{
+  userId: string;
+  tipo: string;
+  versao: number;
+  texto: string;
+  baseLegal: string;
+  createdAt: Date;
+  proxyThreadId?: string;
 }> = [];
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -163,6 +175,90 @@ export function generateCanonicalPdf(candidate: CandidateMock): Buffer {
   return Buffer.concat([header, Buffer.from(text, "utf-8")]);
 }
 
+// ── IA suggest subject/body (Task 8): gera template quando RH deixa vazio ──
+export function suggestContactContent(
+  candidate: CandidateMock,
+  companyId?: string,
+  opts?: { subject?: string; body?: string }
+): { subject: string; body: string } {
+  const hasSubject = opts?.subject && opts.subject.trim().length > 3;
+  const hasBody = opts?.body && opts.body.trim().length > 10;
+  if (hasSubject && hasBody) return { subject: opts!.subject!.trim(), body: opts!.body!.trim() };
+  // LLM stub: personaliza com nome, titulo, stack, objetivo
+  const skill = (candidate.stack?.[0] as any)?.skillId ?? "Cloud";
+  const titulo = candidate.titulo ?? "Profissional";
+  let subject = hasSubject ? opts!.subject!.trim() : `Oportunidade Cloud — convite para ${candidate.nome} (${titulo})`;
+  // fallback subject enriquecido
+  if (!hasSubject) {
+    // inclui skill/regime hint
+    const skillLabel = String(skill).toUpperCase();
+    subject = `Oportunidade: ${titulo} • ${skillLabel} — convite via APinfo`;
+  }
+  let body = hasBody ? opts!.body!.trim() : `Olá ${candidate.nome},\n\nSou do time de recrutamento e seu perfil "${titulo}" chamou nossa atenção — especialmente em ${skill}.\nTemos uma oportunidade alinhada ao seu perfil e gostaríamos de conversar.\nVocê tem disponibilidade para um bate-papo esta semana?\n\nResponda este e-mail (thread proxy) para liberar contato direto. Até breve!`;
+  if (hasSubject && !hasBody) {
+    body = `Olá ${candidate.nome},\n\n${body}`;
+  }
+  if (!hasSubject && hasBody) {
+    subject = `Oportunidade Cloud — convite para ${candidate.nome}`;
+  }
+  return { subject, body };
+}
+
+// ── Helpers LGPD: consent log (implícito ao responder proxy — Decisão B) ───
+export function logContactConsent(
+  userId: string,
+  tipo: string,
+  versao: number,
+  texto: string,
+  proxyThreadId?: string
+): void {
+  const entry = { userId, tipo, versao, texto, baseLegal: "consentimento — resposta no proxy libera contato direto (B)", createdAt: new Date(), proxyThreadId };
+  consentLogs.push(entry);
+  // best-effort prisma persist (ignore if no DB)
+  try {
+    import("./prisma").then(({ prisma }) => {
+      (prisma as any).consentLog?.create?.({ data: { userId, tipo, versao, texto, baseLegal: entry.baseLegal } }).catch(() => {});
+    }).catch(() => {});
+  } catch {}
+}
+
+export function getConsentLogs(filter?: { userId?: string; proxyThreadId?: string }) {
+  if (!filter) return [...consentLogs];
+  return consentLogs.filter((c) => {
+    if (filter.userId && c.userId !== filter.userId) return false;
+    if (filter.proxyThreadId && c.proxyThreadId !== filter.proxyThreadId) return false;
+    return true;
+  });
+}
+
+export function isContactMasked(proxyThreadId: string): boolean {
+  const app = applicationByThread.get(proxyThreadId);
+  if (!app) return true;
+  return app.status !== "respondido";
+}
+
+export function getDirectContact(candidateId: string, companyId: string, proxyThreadId: string): { masked: boolean; email: string; celular: string; nome?: string } {
+  const candidate = candidateStore.get(candidateId);
+  const masked = isContactMasked(proxyThreadId);
+  if (masked) {
+    // mascarado: usa mask helpers via dynamic import fallback
+    const maskEmail = (e: string) => {
+      const at = e.indexOf("@");
+      if (at <= 1) return "***" + (at !== -1 ? e.slice(at) : "") + " 🔒";
+      return e.slice(0, 2) + "***" + e.slice(at) + " 🔒";
+    };
+    const maskPhone = (p: string) => {
+      const d = (p ?? "").replace(/\D/g, "");
+      if (d.length < 8) return "*** 🔒";
+      return d.slice(0, 4) + "***" + d.slice(-2) + " 🔒";
+    };
+    const emailRaw = candidate?.email ?? "cand@example.com";
+    const celRaw = candidate?.celular ?? "+5511999999999";
+    return { masked: true, email: maskEmail(emailRaw), celular: maskPhone(celRaw), nome: candidate?.nome };
+  }
+  return { masked: false, email: candidate?.email ?? "cand@example.com", celular: candidate?.celular ?? "+5511999999999", nome: candidate?.nome };
+}
+
 // ── Envio via Resend (mock in-memory) ───────────────────────────────────
 export async function sendProxyEmail(opts: {
   toCompanyEmail?: string;
@@ -188,6 +284,8 @@ export async function sendProxyEmail(opts: {
     attachments: [{ filename: `cv-${opts.candidate.userId}.pdf`, content: pdf }],
     candidateId: opts.candidate.userId,
     vacancyId: opts.vacancy.id,
+    companyId: opts.vacancy.companyId,
+    origem: "candidaturaLote",
   });
 
   // se Resend real configurado, tentaria enviar (não quebra testes)
@@ -204,7 +302,7 @@ export async function sendProxyEmail(opts: {
 
 // ── Application lifecycle ────────────────────────────────────────────────
 const ALLOWED_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
-  enviado: ["visualizado", "arquivado"],
+  enviado: ["visualizado", "respondido", "arquivado"],
   visualizado: ["respondido", "arquivado"],
   respondido: ["arquivado"],
   arquivado: [],
@@ -239,7 +337,149 @@ export function handleProxyWebhook(proxyThreadId: string, event: string): ProxyA
   else if (ev === "respondido" || ev === "reply" || ev === "replied" || ev === "response") target = "respondido";
   else if (ev === "enviado" || ev === "sent") target = "enviado";
   else throw httpError(`evento webhook desconhecido: ${event}`, 400);
-  return updateApplicationStatus(proxyThreadId, target);
+  const updated = updateApplicationStatus(proxyThreadId, target);
+  // Decisão B (spec §5.2/4): resposta no proxy libera contato direto e loga consentimento
+  if (target === "respondido") {
+    // liberação implícita: log consentimento contatoProxy versionado, com texto LGPD
+    const texto = `Consentimento contato direto liberado ao responder via proxy thread ${proxyThreadId} — base legal: consentimento (resposta conta como consentimento) — origem contatoLote/candidaturaLote`;
+    logContactConsent(updated.candidateId, "contatoProxy", 1, texto, proxyThreadId);
+    // também log genérico tipo "contatoProxy" para auditoria
+    // mascarado agora false
+  }
+  return updated;
+}
+
+// ── Contato RH -> Candidato: envio 1 template -> N threads ──────────────────
+export type ContactBatchItemResult = {
+  candidateId: string;
+  vacancyId?: string | null;
+  applicationId?: string;
+  proxyThreadId?: string;
+  status: string;
+  code?: number;
+  error?: string;
+  masked?: boolean;
+  subject?: string;
+  body?: string;
+};
+
+export async function sendContactEmail(opts: {
+  candidate: CandidateMock;
+  companyId: string;
+  proxyThreadId: string;
+  applicationId: string;
+  subject: string;
+  body: string;
+}): Promise<{ id: string }> {
+  const from = proxyEmailForThread(opts.proxyThreadId);
+  // destinatário é o candidato (mascarado via proxy), mock registra como cand@...
+  const to = opts.candidate.email;
+  // mascarado até envio: sent via proxy, não expõe RH direto ainda
+  // LGPD: até resposta, contato RH fica via proxy; isContactMasked true
+  sentEmails.push({
+    to,
+    from,
+    proxyThreadId: opts.proxyThreadId,
+    subject: opts.subject,
+    body: opts.body + `\n\n— Responda este e-mail para liberar contato direto 🔒 (LGPD: contato via proxy id@via.${PROXY_DOMAIN})`,
+    attachments: [],
+    candidateId: opts.candidate.userId,
+    vacancyId: "",
+    companyId: opts.companyId,
+    origem: "contatoLote",
+  });
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) void apiKey;
+  } catch {}
+  return { id: `email_${opts.proxyThreadId}` };
+}
+
+export async function createBatchContacts(opts: {
+  companyId: string;
+  candidateIds: string[];
+  subject?: string;
+  body?: string;
+  loteId?: string | null;
+  rhId?: string;
+}): Promise<ContactBatchItemResult[]> {
+  const loteId = opts.loteId ?? `lote_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const results: ContactBatchItemResult[] = [];
+  // IA sugere se vazio
+  // sugere por lote (mesmo template base), mas personaliza por candidato se needed
+  for (const candidateId of opts.candidateIds) {
+    try {
+      if (!candidateId || typeof candidateId !== "string") throw httpError("candidateId inválido", 400);
+      let candidate: CandidateMock | null = candidateStore.get(candidateId) ?? null;
+      if (!candidate) {
+        try {
+          const { prisma } = await import("./prisma");
+          const dbCand = await (prisma as any).candidateProfile.findUnique({ where: { userId: candidateId } }).catch(() => null);
+          if (dbCand) {
+            candidate = {
+              userId: dbCand.userId,
+              nome: dbCand.nome,
+              titulo: dbCand.titulo,
+              email: dbCand.email,
+              celular: dbCand.celular,
+              objetivoCrescimento: dbCand.objetivoCrescimento,
+              stack: dbCand.stack as any,
+            };
+            candidateStore.set(candidateId, candidate);
+          }
+        } catch {}
+      }
+      if (!candidate) throw httpError(`candidato não encontrado: ${candidateId}`, 404);
+
+      const sug = suggestContactContent(candidate, opts.companyId, { subject: opts.subject, body: opts.body });
+      const subject = sug.subject;
+      const body = sug.body;
+
+      const proxyThreadId = generateProxyThreadId();
+      const appId = `app_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const now = new Date();
+      const app: ProxyApplication = {
+        id: appId,
+        vacancyId: "",
+        candidateId,
+        companyId: opts.companyId,
+        origem: "contatoLote",
+        proxyThreadId,
+        status: "enviado",
+        loteId,
+        createdAt: now,
+        updatedAt: now,
+      };
+      applicationStore.set(appId, app);
+      applicationByThread.set(proxyThreadId, app);
+      // também index por candidate+company para daily dedupe? não bloqueia recontato mesmo candidato em lote diferente no mesmo dia? spec não diz; permite.
+
+      try {
+        const { prisma } = await import("./prisma");
+        await (prisma as any).application.create({
+          data: {
+            id: appId,
+            vacancyId: null,
+            candidateId,
+            companyId: opts.companyId,
+            origem: "contatoLote",
+            proxyThreadId,
+            status: "enviado",
+            loteId,
+          },
+        }).catch(() => {});
+      } catch {}
+
+      await sendContactEmail({ candidate, companyId: opts.companyId, proxyThreadId, applicationId: appId, subject, body });
+
+      results.push({ candidateId, applicationId: appId, proxyThreadId, status: "enviado", code: 201, masked: true, subject, body });
+    } catch (e: any) {
+      const status = e.status ?? e.statusCode ?? 400;
+      const msg = e.message ?? "erro";
+      results.push({ candidateId, status: "error", error: msg, code: status, masked: true });
+    }
+  }
+  return results;
 }
 
 // ── Batch create (core logic, sem rollback total) ───────────────────────
@@ -389,6 +629,7 @@ export function clearAllForTests() {
   applicationByCandidateVacancy.clear();
   dailyRateStore.clear();
   sentEmails.length = 0;
+  consentLogs.length = 0;
 }
 
 export function clearSentEmails() {
