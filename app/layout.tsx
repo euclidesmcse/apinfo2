@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
 import { defaultLocale } from "@/i18n";
+import "./globals.css";
 
 export const dynamic = "force-dynamic";
 
