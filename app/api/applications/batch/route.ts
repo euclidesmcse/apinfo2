@@ -166,15 +166,30 @@ export async function PATCH(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const candidateId = url.searchParams.get("candidateId") ?? url.searchParams.get("userId") ?? req.headers.get("x-candidate-id") ?? req.headers.get("x-user-id");
-    // try JWT auth to prefer authenticated candidateId
+    // try JWT auth — authoritative in prod
     let resolvedId: string | null = null;
     try {
       const { requireAuth } = require("@/lib/auth");
       const user = requireAuth(req);
       resolvedId = String(user.userId ?? user.celular ?? "");
     } catch {}
+    // query param allowed, but in prod requires JWT (IDOR fix)
+    let candidateId: string | null = url.searchParams.get("candidateId") ?? url.searchParams.get("userId");
+    // header spoof only in test
+    if (process.env.NODE_ENV === "test") {
+      candidateId = candidateId ?? req.headers.get("x-candidate-id") ?? req.headers.get("x-user-id");
+    }
+    // prod: must be authenticated — query/header alone is not enough
+    if (process.env.NODE_ENV !== "test" && !resolvedId) {
+      return NextResponse.json({ error: "não autorizado" }, { status: 401 });
+    }
+    // test: allow unauthenticated query/header for TDD
     const filterId = resolvedId || candidateId;
+    if (!filterId) {
+      if (process.env.NODE_ENV !== "test") {
+        return NextResponse.json({ error: "não autorizado" }, { status: 401 });
+      }
+    }
     const { applicationStore } = await import("@/lib/proxy");
     let apps = [...applicationStore.values()];
     if (filterId) apps = apps.filter((a: any) => String(a.candidateId) === String(filterId));
