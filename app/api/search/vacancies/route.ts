@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchVacancies, PAGE_SIZE } from "@/lib/search";
-import { isValidLocale, defaultLocale } from "@/i18n";
+import { isValidLocale, defaultLocale, type Locale } from "@/i18n";
 import { generateEmbedding } from "@/lib/embeddings";
 
 export async function GET(req: NextRequest) {
@@ -16,9 +16,10 @@ export async function GET(req: NextRequest) {
   const faixaAte = url.searchParams.get("faixaAte") ? Number(url.searchParams.get("faixaAte")) : null;
   // lang no embedding query (Task 10): ?lang=en => multilingual-e5 query lang
   const langRaw = url.searchParams.get("lang") ?? req.headers.get("x-locale") ?? defaultLocale;
-  const lang = isValidLocale(langRaw) ? langRaw : defaultLocale;
-  // warm embedding with lang for contract (search.ts also does)
-  void generateEmbedding(q ?? "", { lang });
+  const lang: Locale = isValidLocale(langRaw) ? langRaw : defaultLocale;
+  try {
+    await generateEmbedding(q ?? "", { lang });
+  } catch {}
 
   const params = { q, page, pageSize, regime, localidade, nivel, faixaDe, faixaAte, lang } as any;
 

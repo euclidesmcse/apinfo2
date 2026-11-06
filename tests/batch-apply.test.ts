@@ -217,7 +217,9 @@ describe("Candidatura em Lote 1-clique — Task 7", () => {
 
     it("lib/proxy expõe transição e page minhas-candidaturas existe com estados", () => {
       expect(fs.existsSync(path.join(__dirname, "../lib/proxy.ts"))).toBe(true);
-      expect(fs.existsSync(path.join(__dirname, "../app/minhas-candidaturas/page.tsx"))).toBe(true);
+      const hasGrouped = fs.existsSync(path.join(__dirname, "../app/(app)/minhas-candidaturas/page.tsx"));
+      const hasLegacy = fs.existsSync(path.join(__dirname, "../app/minhas-candidaturas/page.tsx"));
+      expect(hasGrouped || hasLegacy).toBe(true);
       expect(fs.existsSync(path.join(__dirname, "../app/api/applications/batch/route.ts"))).toBe(true);
       const proxySrc = fs.readFileSync(path.join(__dirname, "../lib/proxy.ts"), "utf-8");
       expect(proxySrc).toMatch(/visualizado.*respondido|respondido.*visualizado/);
@@ -227,7 +229,10 @@ describe("Candidatura em Lote 1-clique — Task 7", () => {
       expect(batchSrc).toMatch(/BATCH_LIMIT|10/);
       expect(batchSrc).toMatch(/DAILY_LIMIT|30.*dia|30/);
       expect(batchSrc).toMatch(/207/);
-      const pageSrc = fs.readFileSync(path.join(__dirname, "../app/minhas-candidaturas/page.tsx"), "utf-8");
+      const pagePath = hasGrouped
+        ? path.join(__dirname, "../app/(app)/minhas-candidaturas/page.tsx")
+        : path.join(__dirname, "../app/minhas-candidaturas/page.tsx");
+      const pageSrc = fs.readFileSync(pagePath, "utf-8");
       expect(pageSrc).toMatch(/enviado.*visualizado.*respondido|visualizado.*respondido/);
       expect(pageSrc).toMatch(/minhas-candidaturas|Minhas candidaturas/i);
     });

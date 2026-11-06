@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const rec = requestOtp(celular);
     // Em produção não expor código; stub envia SMS
     const payload: Record<string, unknown> = { sent: true, expiraEm: rec.expiraEm.toISOString() };
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV === "test") {
       payload.debugCodigo = rec.codigo;
     }
     return NextResponse.json(payload, { status: 200 });

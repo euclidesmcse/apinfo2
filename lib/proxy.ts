@@ -5,6 +5,10 @@
  * - Transição estados enviado>visualizado>respondido via webhook
  * - Stores in-memory para vacancies / applications / rate limit (fallback quando DB off)
  * - Primary import para testes: tudo aqui é sincronizável e resetável
+ *
+ * WARNING / TODO (Fase 1 MVP): todos os stores abaixo são in-memory (Map / array)
+ * e serão perdidos em restart/scale. Para produção migrar para Prisma (Postgres)
+ * + Redis (rate limit / cooldown) antes do deploy em múltiplas instâncias.
  */
 
 import * as crypto from "crypto";

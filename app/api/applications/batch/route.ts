@@ -17,6 +17,22 @@ function httpError(message: string, status: number) {
   return e;
 }
 
+function isWebhookAuthorized(req: NextRequest): boolean {
+  if (process.env.NODE_ENV === "test") return true;
+  const secret = process.env.CRON_SECRET || process.env.WEBHOOK_SECRET;
+  if (!secret) return false;
+  const auth = req.headers.get("authorization") ?? "";
+  const xCron = req.headers.get("x-cron-secret") ?? "";
+  const xWebhook = req.headers.get("x-webhook-secret") ?? "";
+  const qSecret = req.nextUrl.searchParams.get("cron_secret") ?? "";
+  if (auth === `Bearer ${secret}`) return true;
+  if (auth === secret) return true;
+  if (xCron === secret) return true;
+  if (xWebhook === secret) return true;
+  if (qSecret === secret) return true;
+  return false;
+}
+
 function resolveCandidateId(req: NextRequest, body: any): string | null {
   // 1. try JWT auth
   try {
@@ -28,9 +44,11 @@ function resolveCandidateId(req: NextRequest, body: any): string | null {
   // 2. body candidateId
   if (body?.candidateId && typeof body.candidateId === "string") return body.candidateId;
   if (body?.userId && typeof body.userId === "string") return body.userId;
-  // 3. headers fallback for tests
-  const hCandidate = req.headers.get("x-candidate-id") ?? req.headers.get("x-user-id");
-  if (hCandidate) return hCandidate;
+  // 3. headers fallback only in test
+  if (process.env.NODE_ENV === "test") {
+    const hCandidate = req.headers.get("x-candidate-id") ?? req.headers.get("x-user-id");
+    if (hCandidate) return hCandidate;
+  }
   return null;
 }
 
@@ -127,6 +145,9 @@ export async function POST(req: NextRequest) {
 
 // Webhook handler inline: PATCH /api/applications/batch {proxyThreadId, event}
 export async function PATCH(req: NextRequest) {
+  if (!isWebhookAuthorized(req)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   try {
     const body = await req.json().catch(() => ({} as any));
     const proxyThreadId: string = body.proxyThreadId ?? body.threadId ?? body.id;
@@ -139,6 +160,46 @@ export async function PATCH(req: NextRequest) {
   } catch (e: any) {
     const status = e.status ?? e.statusCode ?? 500;
     return NextResponse.json({ error: e.message }, { status });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const url = new URL(req.url);
+    const candidateId = url.searchParams.get("candidateId") ?? url.searchParams.get("userId") ?? req.headers.get("x-candidate-id") ?? req.headers.get("x-user-id");
+    // try JWT auth to prefer authenticated candidateId
+    let resolvedId: string | null = null;
+    try {
+      const { requireAuth } = require("@/lib/auth");
+      const user = requireAuth(req);
+      resolvedId = String(user.userId ?? user.celular ?? "");
+    } catch {}
+    const filterId = resolvedId || candidateId;
+    const { applicationStore } = await import("@/lib/proxy");
+    let apps = [...applicationStore.values()];
+    if (filterId) apps = apps.filter((a: any) => String(a.candidateId) === String(filterId));
+    // also try DB if empty and prisma available
+    if (apps.length === 0 && filterId) {
+      try {
+        const { prisma } = await import("@/lib/prisma");
+        const dbApps = await (prisma as any).application.findMany({ where: { candidateId: filterId } }).catch(() => []);
+        if (dbApps && dbApps.length) apps = dbApps;
+      } catch {}
+    }
+    const applications = apps.map((a: any) => ({
+      id: a.id,
+      vacancyId: a.vacancyId ?? null,
+      candidateId: a.candidateId,
+      proxyThreadId: a.proxyThreadId,
+      status: a.status,
+      origem: a.origem,
+      companyId: a.companyId,
+      createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
+    }));
+    return NextResponse.json({ applications, results: applications }, { status: 200 });
+  } catch (e: any) {
+    const status = e.status ?? e.statusCode ?? 500;
+    return NextResponse.json({ error: e.message ?? "erro" }, { status });
   }
 }
 

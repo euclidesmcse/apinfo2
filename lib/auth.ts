@@ -15,7 +15,14 @@ export const CONSENT_TYPES = [
   "iaReescrita",
 ] as const;
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me-apinfo2-jwt";
+const JWT_SECRET = (() => {
+  const s = process.env.JWT_SECRET;
+  if (!s) {
+    if (process.env.NODE_ENV === "production") throw new Error("JWT_SECRET não configurado em produção");
+    return "dev-secret-change-me-apinfo2-jwt";
+  }
+  return s;
+})();
 
 // ── Tipos ────────────────────────────────────────────────────────────
 export type ConsentPayload = {
@@ -89,7 +96,16 @@ export function hashOtp(codigo: string): string {
 }
 
 export function verifyHash(codigo: string, hash: string): boolean {
-  return hashOtp(codigo) === hash;
+  const a = hashOtp(codigo);
+  const b = hash;
+  try {
+    const ba = Buffer.from(a, "utf-8");
+    const bb = Buffer.from(b, "utf-8");
+    if (ba.length !== bb.length) return false;
+    return crypto.timingSafeEqual(ba, bb);
+  } catch {
+    return false;
+  }
 }
 
 export function clearOtpStore(): void {
@@ -164,7 +180,13 @@ export function verifyJwt(token: string): Record<string, any> | null {
   const [h, p, sig] = parts;
   const data = `${h}.${p}`;
   const expected = base64url(crypto.createHmac("sha256", JWT_SECRET).update(data).digest());
-  if (sig !== expected) return null;
+  try {
+    const a = Buffer.from(sig, "utf-8");
+    const b = Buffer.from(expected, "utf-8");
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  } catch {
+    return null;
+  }
   try {
     const payload = JSON.parse(base64urlDecode(p));
     const nowSec = Math.floor(Date.now() / 1000);
@@ -220,9 +242,11 @@ export function requestOtp(celularRaw: string): OtpRecord {
   otpStore.set(celular, rec);
   cooldownStore.set(celular, now.getTime());
 
-  // fallback SMS stub (log)
-  // eslint-disable-next-line no-console
-  console.log(`[auth] OTP para ${celular}: ${codigo} expira ${expiraEm.toISOString()} (stub SMS)`);
+  // fallback SMS stub — only log OTP in test (never in prod)
+  if (process.env.NODE_ENV === "test") {
+    // eslint-disable-next-line no-console
+    console.log(`[auth] OTP para ${celular}: ${codigo} expira ${expiraEm.toISOString()} (stub SMS)`);
+  }
   return rec;
 }
 

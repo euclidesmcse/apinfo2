@@ -25,21 +25,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `limite de ${BATCH_LIMIT} por lote`, code: 400 }, { status: 400 });
     }
 
-    // resolve RH/companyId — auth JWT or body or headers
+    // resolve RH/companyId — auth JWT required outside test
     let rhId: string | null = null;
     let companyId: string | null = body.companyId ?? body.company_id ?? null;
+    let authOk = false;
     try {
       const { requireAuth } = require("@/lib/auth");
       const user = requireAuth(req);
       if (user?.userId) rhId = String(user.userId);
       if (user?.companyId) companyId = companyId ?? String(user.companyId);
       if (user?.celular) rhId = rhId ?? String(user.celular);
+      authOk = true;
     } catch {}
-    if (!rhId) rhId = body.rhId ?? req.headers.get("x-rh-id") ?? req.headers.get("x-user-id") ?? null;
-    if (!companyId) companyId = req.headers.get("x-company-id") ?? null;
-
+    if (!authOk && process.env.NODE_ENV === "test") {
+      if (!rhId) rhId = body.rhId ?? req.headers.get("x-rh-id") ?? req.headers.get("x-user-id") ?? null;
+      if (!companyId) companyId = req.headers.get("x-company-id") ?? null;
+    }
     if (!companyId) {
-      // test env fallback
       if (process.env.NODE_ENV === "test") companyId = body.companyId ?? "test-company";
       else return NextResponse.json({ error: "companyId obrigatório" }, { status: 400 });
     }
@@ -115,8 +117,27 @@ export async function POST(req: NextRequest) {
   }
 }
 
+function isWebhookAuthorized(req: NextRequest): boolean {
+  if (process.env.NODE_ENV === "test") return true;
+  const secret = process.env.CRON_SECRET || process.env.WEBHOOK_SECRET;
+  if (!secret) return false;
+  const auth = req.headers.get("authorization") ?? "";
+  const xCron = req.headers.get("x-cron-secret") ?? "";
+  const xWebhook = req.headers.get("x-webhook-secret") ?? "";
+  const qSecret = req.nextUrl.searchParams.get("cron_secret") ?? "";
+  if (auth === `Bearer ${secret}`) return true;
+  if (auth === secret) return true;
+  if (xCron === secret) return true;
+  if (xWebhook === secret) return true;
+  if (qSecret === secret) return true;
+  return false;
+}
+
 // PATCH webhook: resposta do candidato no proxy libera contato direto (B) e loga consentimento
 export async function PATCH(req: NextRequest) {
+  if (!isWebhookAuthorized(req)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   try {
     const body = await req.json().catch(() => ({} as any));
     const proxyThreadId: string = body.proxyThreadId ?? body.threadId ?? body.id;

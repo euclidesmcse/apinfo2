@@ -8,5 +8,9 @@ Conector simples e inteligente **Candidatos <-> Empresas** inspirado no [apinfo.
 - Higiene automatica 180d (CV) / 14d (vaga) com nudges n8n
 - Responsivo, multilingue PT-BR/EN, LGPD granular
 
+> **AVISO MVP — stores in-memory:** `lib/proxy.ts` e `lib/auth.ts` usam `Map`/array em
+> memória (vacancies, applications, OTP, rate limit). Para produção migrar para
+> **Prisma (Postgres) + Redis** antes de escalar para múltiplas instâncias.
+
 Spec: `docs/superpowers/specs/2026-11-07-apinfo-2.0-design.md`
 Plan Fase 1: `docs/superpowers/plans/2026-11-07-apinfo-2.0-fase1-mvp.md`

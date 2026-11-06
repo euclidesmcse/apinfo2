@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCandidates, PAGE_SIZE } from "@/lib/search";
-import { isValidLocale, defaultLocale } from "@/i18n";
+import { isValidLocale, defaultLocale, type Locale } from "@/i18n";
 import { generateEmbedding } from "@/lib/embeddings";
 
 export async function GET(req: NextRequest) {
@@ -13,8 +13,10 @@ export async function GET(req: NextRequest) {
   const regime = url.searchParams.get("regime") ?? undefined;
   const nivel = url.searchParams.get("nivel") ?? undefined;
   const langRaw = url.searchParams.get("lang") ?? req.headers.get("x-locale") ?? defaultLocale;
-  const lang = isValidLocale(langRaw) ? langRaw : defaultLocale;
-  void generateEmbedding(q ?? "", { lang });
+  const lang: Locale = isValidLocale(langRaw) ? langRaw : defaultLocale;
+  try {
+    await generateEmbedding(q ?? "", { lang });
+  } catch {}
 
   const params = { q, page, pageSize, modo, regime, nivel, lang } as any;
 
