@@ -3,6 +3,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getLocale } from "next-intl/server";
 import { defaultLocale } from "@/i18n";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "W2Talent",
   description: "Conector simples Candidatos <-> Empresas",

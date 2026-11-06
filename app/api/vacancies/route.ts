@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 }
 
 // handleVacancyPOST alias for test contract (re-export)
-export const handleVacancyPOST = POST;
+// handleVacancyPOST removed — Next.js Route only allows GET/POST/PATCH
 
 export async function GET(req: NextRequest) {
   try {

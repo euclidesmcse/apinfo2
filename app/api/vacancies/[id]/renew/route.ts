@@ -30,5 +30,5 @@ async function handleRenew(req: NextRequest, params?: { id: string }) {
   }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) { return handleRenew(req, ctx.params); }
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) { return handleRenew(req, ctx.params); }
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) { const p = await ctx.params; return handleRenew(req, p); }
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) { const p = await ctx.params; return handleRenew(req, p); }

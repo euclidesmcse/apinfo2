@@ -15,14 +15,18 @@ export const CONSENT_TYPES = [
   "iaReescrita",
 ] as const;
 
-const JWT_SECRET = (() => {
+function getJwtSecret(): string {
   const s = process.env.JWT_SECRET;
-  if (!s) {
-    if (process.env.NODE_ENV === "production") throw new Error("JWT_SECRET não configurado em produção");
-    return "dev-secret-change-me-w2talent-jwt";
+  if (s) return s;
+  // Durante `next build` o Cloudflare roda com NODE_ENV=production mas sem secrets ainda injetados
+  // — não quebrar o build, usar fallback apenas para geração estática.
+  // Em runtime real (request), signJwt/verifyJwt vão exigir JWT_SECRET.
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.CI) {
+    return "build-dummy-w2talent-jwt-not-for-runtime";
   }
-  return s;
-})();
+  if (process.env.NODE_ENV === "production") throw new Error("JWT_SECRET não configurado em produção");
+  return "dev-secret-change-me-w2talent-jwt";
+}
 
 // ── Tipos ────────────────────────────────────────────────────────────
 export type ConsentPayload = {
@@ -92,7 +96,7 @@ export function generateOtp(): string {
 }
 
 export function hashOtp(codigo: string): string {
-  return crypto.createHash("sha256").update(codigo + JWT_SECRET).digest("hex");
+  return crypto.createHash("sha256").update(codigo + getJwtSecret()).digest("hex");
 }
 
 export function verifyHash(codigo: string, hash: string): boolean {
@@ -169,7 +173,7 @@ export function signJwt(payload: Record<string, unknown>, expiresDays = JWT_EXPI
   const h = base64url(JSON.stringify(header));
   const p = base64url(JSON.stringify(fullPayload));
   const data = `${h}.${p}`;
-  const sig = base64url(crypto.createHmac("sha256", JWT_SECRET).update(data).digest());
+  const sig = base64url(crypto.createHmac("sha256", getJwtSecret()).update(data).digest());
   return `${data}.${sig}`;
 }
 
@@ -179,7 +183,7 @@ export function verifyJwt(token: string): Record<string, any> | null {
   if (parts.length !== 3) return null;
   const [h, p, sig] = parts;
   const data = `${h}.${p}`;
-  const expected = base64url(crypto.createHmac("sha256", JWT_SECRET).update(data).digest());
+  const expected = base64url(crypto.createHmac("sha256", getJwtSecret()).update(data).digest());
   try {
     const a = Buffer.from(sig, "utf-8");
     const b = Buffer.from(expected, "utf-8");

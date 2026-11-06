@@ -218,4 +218,4 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export const handleBatchPOST = POST;
+// handleBatchPOST removed — Next.js Route only allows GET/POST/PATCH etc.

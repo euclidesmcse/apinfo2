@@ -9,8 +9,9 @@ function parseIdFromUrl(req: NextRequest): string {
   return "";
 }
 
-export async function GET(req: NextRequest, ctx?: { params: { id: string } }) {
-  const id = ctx?.params?.id ?? parseIdFromUrl(req);
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id: paramId } = await ctx.params;
+  const id = paramId ?? parseIdFromUrl(req);
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
   try {
     const { prisma } = await import("@/lib/prisma");
@@ -22,9 +23,10 @@ export async function GET(req: NextRequest, ctx?: { params: { id: string } }) {
   }
 }
 
-export async function PATCH(req: NextRequest, ctx?: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id: paramId } = await ctx.params;
   const url = new URL(req.url);
-  const id = ctx?.params?.id ?? parseIdFromUrl(req);
+  const id = paramId ?? parseIdFromUrl(req);
   const isRenew = url.pathname.endsWith("/renew") || url.searchParams.get("action") === "renew";
   let body: any = {};
   try { body = await req.json().catch(() => ({})); } catch {}
@@ -73,13 +75,13 @@ export async function PATCH(req: NextRequest, ctx?: { params: { id: string } }) 
   }
 }
 
-export async function PUT(req: NextRequest, ctx?: { params: { id: string } }) {
-  const id = ctx?.params?.id ?? parseIdFromUrl(req);
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id: paramId } = await ctx.params;
+  const id = paramId ?? parseIdFromUrl(req);
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
   let body: any = {};
   try { body = await req.json(); } catch { return NextResponse.json({ error: "payload inválido" }, { status: 400 }); }
 
-  // I4: validate faixa + titulo + partial canonical
   try {
     validateVacancy(body, { partial: true });
   } catch (e: any) {
@@ -116,15 +118,16 @@ export async function PUT(req: NextRequest, ctx?: { params: { id: string } }) {
         tipoContrato: body.tipoContrato ?? undefined,
       },
     });
-    return NextResponse.json({ id: updated.id, ...updated }, { status: 200 });
+    return NextResponse.json({ ...updated, id: updated.id }, { status: 200 });
   } catch (e: any) {
     const status = e.status ?? e.statusCode ?? 500;
     return NextResponse.json({ error: e.message ?? "erro ao atualizar vaga" }, { status });
   }
 }
 
-export async function DELETE(req: NextRequest, ctx?: { params: { id: string } }) {
-  const id = ctx?.params?.id ?? parseIdFromUrl(req);
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id: paramId } = await ctx.params;
+  const id = paramId ?? parseIdFromUrl(req);
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
   try {
     const { prisma } = await import("@/lib/prisma");

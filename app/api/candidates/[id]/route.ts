@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateForPublish, publishDraft, buildTsvectorText } from "@/lib/cv-extract";
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params;
   try {
     const body = await req.json().catch(() => ({} as any));
     const canonico = body.canonico ?? body.draft ?? body;
@@ -73,6 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params;
   return NextResponse.json({ id: params.id, message: "use PUT para publicar" }, { status: 200 });
 }
