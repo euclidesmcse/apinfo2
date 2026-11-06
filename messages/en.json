@@ -1,0 +1,110 @@
+{
+  "common": {
+    "search": "Search",
+    "searchPlaceholder": "Cloud Analyst remote CLT 12k",
+    "clear": "Clear",
+    "clearFilters": "Clear filters",
+    "page": "Page",
+    "of": "of",
+    "loading": "Loading…",
+    "error": "Error",
+    "retry": "Try again",
+    "close": "Close",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "prev": "Previous"
+  },
+  "nav": {
+    "home": "Home",
+    "vagas": "Jobs",
+    "candidatos": "Candidates",
+    "minhasCandidaturas": "My applications",
+    "dashboard": "Dashboard"
+  },
+  "vagas": {
+    "title": "Jobs",
+    "subtitle": "Find your next opportunity",
+    "searchPlaceholder": "Cloud Analyst remote CLT 12k",
+    "tableAriaLabel": "Job listings",
+    "cardsAriaLabel": "Job cards",
+    "colSelecao": "Selection",
+    "colVaga": "Job",
+    "colSkills": "Skills",
+    "colLocal": "Location / Remote",
+    "colRegime": "Contract",
+    "colFaixa": "Salary",
+    "colAtualizacao": "Updated",
+    "colContato": "Contact",
+    "colAcao": "Action",
+    "emptyTitle": "No jobs found",
+    "emptyBody": "Try adjusting filters or search for another term.",
+    "emptySuggestionPrefix": "Did you mean",
+    "emptyCTA": "Clear filters and see all jobs",
+    "suggestionCTA": "See suggestion",
+    "remote": "remote",
+    "contactMaskedTooltip": "Contact hidden — GDPR (unlocked when replying via proxy)"
+  },
+  "candidatos": {
+    "title": "Candidates",
+    "subtitle": "Find talent",
+    "searchPlaceholder": "Cloud Analyst",
+    "tableAriaLabel": "Candidate listings",
+    "cardsAriaLabel": "Candidate cards",
+    "emptyTitle": "No candidates found",
+    "emptyBody": "Try adjusting filters.",
+    "emptyCTA": "Clear filters"
+  },
+  "batchBar": {
+    "candidatar": "Apply",
+    "contatar": "Contact",
+    "selected": "{count} selected — clear",
+    "clear": "clear — remove all",
+    "drawerLabel": "selection drawer",
+    "openDrawer": "open selection drawer",
+    "closeDrawer": "close drawer",
+    "limitError": "Batch limit 10 reached — max 10 per batch",
+    "limitHint": "limit 10 per batch",
+    "batchLabel": "Batch bar",
+    "counterLabel": "selection counter"
+  },
+  "modal": {
+    "close": "Close modal",
+    "details": "Job details",
+    "candidateDetails": "Candidate details",
+    "overlayCloseHint": "Click outside to close without losing selection"
+  },
+  "empty": {
+    "noResults": "No results for \"{query}\".",
+    "suggestion": "Did you mean \"{suggestion}\"?",
+    "aiSuggestion": "AI suggestion",
+    "tryAdjust": "Try adjusting filters or search for another term",
+    "cta": "Clear filters",
+    "ctaVagas": "See all jobs",
+    "ctaCandidatos": "See all candidates"
+  },
+  "errors": {
+    "notFound": "Not found",
+    "expired": "Expired job",
+    "alreadyApplied": "you already applied on {date}"
+  },
+  "a11y": {
+    "skills": "skills",
+    "contactMasked": "contact hidden",
+    "selectItem": "select-{id}",
+    "lupa": "view-{id}",
+    "vacancyCardLabel": "job {titulo}",
+    "candidateCardLabel": "candidate {nome}"
+  },
+  "pwa": {
+    "name": "APinfo 2.0",
+    "shortName": "APinfo",
+    "description": "Simple connector Candidates <-> Companies"
+  },
+  "currency": {
+    "BRL": "R$",
+    "USD": "$",
+    "EUR": "€"
+  }
+}

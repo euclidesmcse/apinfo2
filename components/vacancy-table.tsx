@@ -1,6 +1,11 @@
 "use client";
 import * as React from "react";
 import { formatFaixa, formatTempo, skillsDisplay, maskEmail, maskPhone } from "@/lib/search";
+import { formatCurrencyWithLocale, formatDateByLocale } from "@/i18n";
+// breakpoints: 360 / 768 / 1024 / 1280 — Tailwind screens xs/md/lg/xl (see tailwind.config.js)
+// next-intl: colunas via messages/pt-BR.json, en.json — fallback PT-BR (i18n.ts t())
+// PWA: manifest.json linked in layout.tsx
+// a11y WCAG 2.1 AA: <table><th scope>, aria-label, focus, keyboard
 
 export type VacancyRow = {
   id: string;

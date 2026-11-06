@@ -4,6 +4,7 @@ import { VacancyTable } from "@/components/vacancy-table";
 import { VacancyCards } from "@/components/vacancy-cards";
 import { DetailModal } from "@/components/detail-modal";
 import { BatchBar } from "@/components/batch-bar";
+import { EmptyState } from "@/components/empty-state";
 import { selectionStore } from "@/lib/selection-store";
 
 type Item = any;
@@ -31,8 +32,18 @@ export default function VagasPage() {
     return () => { try { (unsub as any)?.(); } catch {} };
   }, []);
 
+  const getLang = () => {
+    try {
+      const seg = window.location.pathname.split("/").filter(Boolean)[0];
+      if (seg === "en") return "en";
+      const sp = new URLSearchParams(window.location.search);
+      return sp.get("lang") ?? "pt-BR";
+    } catch { return "pt-BR"; }
+  };
+
   const fetchPage = React.useCallback(async (query: string, p: number) => {
-    const params = new URLSearchParams({ q: query, page: String(p), pageSize: "20" });
+    const lang = getLang();
+    const params = new URLSearchParams({ q: query, page: String(p), pageSize: "20", lang });
     const res = await fetch(`/api/search/vacancies?${params.toString()}`);
     const data = await res.json();
     setItems(data.items ?? []);
@@ -45,6 +56,18 @@ export default function VagasPage() {
   React.useEffect(() => {
     fetchPage(q, page);
   }, [q, page, fetchPage]);
+
+  const handleClearFilters = () => {
+    setQ("");
+    setPage(1);
+    fetchPage("", 1);
+  };
+
+  const handleUseSuggestion = (s: string) => {
+    setQ(s);
+    setPage(1);
+    fetchPage(s, 1);
+  };
 
   const toggle = (id: string) => {
     const res = selectionStore.toggle(id);
@@ -65,10 +88,10 @@ export default function VagasPage() {
 
   const closeModal = () => {
     setModalOpen(false);
-    // scroll preservado pelo DetailModal; seleção intacta
   };
 
   const selectedSet = React.useMemo(() => new Set(selected), [selected]);
+  const isEmpty = items.length === 0;
 
   return (
     <main className="vagas-page p-4 pb-24">
@@ -76,6 +99,9 @@ export default function VagasPage() {
       <input aria-label="busca-vagas" placeholder="Analista Cloud remoto" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
       {suggestion ? <div role="status" aria-label="sugestao">Você quis dizer &quot;{suggestion}&quot;?</div> : null}
       {emptyCTA ? <div role="status" aria-label="empty-cta">{emptyCTA}</div> : null}
+      {isEmpty ? (
+        <EmptyState query={q} suggestion={suggestion} emptyCTA={emptyCTA} variant="vagas" onClearFilters={handleClearFilters} onUseSuggestion={handleUseSuggestion} />
+      ) : null}
       <div className="hidden md:block">
         <VacancyTable items={items} selectedIds={selectedSet} onToggle={toggle} onOpenDetail={openDetail} />
       </div>
@@ -88,8 +114,7 @@ export default function VagasPage() {
         <button disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Próxima</button>
       </div>
       <DetailModal open={modalOpen} onClose={closeModal} item={modalItem} triggerRef={activeTrigger} title={modalItem?.titulo ?? "Detalhes da vaga"} />
-      <BatchBar variant="vagas" onAction={(ids) => { /* Task 7: POST /api/applications/batch */ void ids; }} />
-      {/* hidden lupa refs for focus return */}
+      <BatchBar variant="vagas" onAction={(ids) => { void ids; }} />
       <span aria-hidden className="hidden">{items.map((it) => <button key={it.id} ref={(el) => { if (el) triggerRefs.current.set(it.id, el); }} aria-label={`lupa-${it.id}`} onClick={() => openDetail(it.id)} />)}</span>
     </main>
   );

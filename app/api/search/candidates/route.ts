@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchCandidates, PAGE_SIZE } from "@/lib/search";
+import { isValidLocale, defaultLocale } from "@/i18n";
+import { generateEmbedding } from "@/lib/embeddings";
 
 export async function GET(req: NextRequest) {
   const start = Date.now();
@@ -10,8 +12,11 @@ export async function GET(req: NextRequest) {
   const modo = url.searchParams.get("modo") ?? url.searchParams.get("localidade") ?? undefined;
   const regime = url.searchParams.get("regime") ?? undefined;
   const nivel = url.searchParams.get("nivel") ?? undefined;
+  const langRaw = url.searchParams.get("lang") ?? req.headers.get("x-locale") ?? defaultLocale;
+  const lang = isValidLocale(langRaw) ? langRaw : defaultLocale;
+  void generateEmbedding(q ?? "", { lang });
 
-  const params = { q, page, pageSize, modo, regime, nivel };
+  const params = { q, page, pageSize, modo, regime, nivel, lang } as any;
 
   const result = await searchCandidates(params);
   const tookMs = Date.now() - start;

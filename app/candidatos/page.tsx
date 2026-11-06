@@ -4,6 +4,7 @@ import { CandidateTable } from "@/components/candidate-table";
 import { CandidateCards } from "@/components/candidate-cards";
 import { DetailModal } from "@/components/detail-modal";
 import { BatchBar } from "@/components/batch-bar";
+import { EmptyState } from "@/components/empty-state";
 import { selectionStore } from "@/lib/selection-store";
 
 type Item = any;
@@ -31,8 +32,17 @@ export default function CandidatosPage() {
     return () => { try { (unsub as any)?.(); } catch {} };
   }, []);
 
+  const getLang = () => {
+    try {
+      const seg = window.location.pathname.split("/").filter(Boolean)[0];
+      if (seg === "en") return "en";
+      return new URLSearchParams(window.location.search).get("lang") ?? "pt-BR";
+    } catch { return "pt-BR"; }
+  };
+
   const fetchPage = React.useCallback(async (query: string, p: number) => {
-    const params = new URLSearchParams({ q: query, page: String(p), pageSize: "20" });
+    const lang = getLang();
+    const params = new URLSearchParams({ q: query, page: String(p), pageSize: "20", lang });
     const res = await fetch(`/api/search/candidates?${params.toString()}`);
     const data = await res.json();
     setItems(data.items ?? []);
@@ -45,6 +55,9 @@ export default function CandidatosPage() {
   React.useEffect(() => {
     fetchPage(q, page);
   }, [q, page, fetchPage]);
+
+  const handleClearFilters = () => { setQ(""); setPage(1); fetchPage("", 1); };
+  const handleUseSuggestion = (s: string) => { setQ(s); setPage(1); fetchPage(s, 1); };
 
   const toggle = (id: string) => {
     const res = selectionStore.toggle(id);
@@ -62,6 +75,7 @@ export default function CandidatosPage() {
 
   const closeModal = () => setModalOpen(false);
   const selectedSet = React.useMemo(() => new Set(selected), [selected]);
+  const isEmpty = items.length === 0;
 
   return (
     <main className="candidatos-page p-4 pb-24">
@@ -69,6 +83,9 @@ export default function CandidatosPage() {
       <input aria-label="busca-candidatos" placeholder="Analista Cloud" value={q} onChange={(e) => { setQ(e.target.value); setPage(1); }} />
       {suggestion ? <div role="status" aria-label="sugestao">Você quis dizer &quot;{suggestion}&quot;?</div> : null}
       {emptyCTA ? <div role="status" aria-label="empty-cta">{emptyCTA}</div> : null}
+      {isEmpty ? (
+        <EmptyState query={q} suggestion={suggestion} emptyCTA={emptyCTA} variant="candidatos" onClearFilters={handleClearFilters} onUseSuggestion={handleUseSuggestion} />
+      ) : null}
       <div className="hidden md:block">
         <CandidateTable items={items} selectedIds={selectedSet} onToggle={toggle} onOpenDetail={openDetail} />
       </div>

@@ -1,0 +1,110 @@
+{
+  "common": {
+    "search": "Buscar",
+    "searchPlaceholder": "Analista Cloud remoto CLT 12k",
+    "clear": "Limpar",
+    "clearFilters": "Limpar filtros",
+    "page": "Página",
+    "of": "de",
+    "loading": "Carregando…",
+    "error": "Erro",
+    "retry": "Tentar novamente",
+    "close": "Fechar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "next": "Próxima",
+    "prev": "Anterior"
+  },
+  "nav": {
+    "home": "Início",
+    "vagas": "Vagas",
+    "candidatos": "Candidatos",
+    "minhasCandidaturas": "Minhas candidaturas",
+    "dashboard": "Dashboard"
+  },
+  "vagas": {
+    "title": "Vagas",
+    "subtitle": "Encontre sua próxima oportunidade",
+    "searchPlaceholder": "Analista Cloud remoto CLT 12k",
+    "tableAriaLabel": "Lista de vagas",
+    "cardsAriaLabel": "Lista de vagas em cards",
+    "colSelecao": "Seleção",
+    "colVaga": "Vaga",
+    "colSkills": "Skills",
+    "colLocal": "Local / Remoto",
+    "colRegime": "Regime",
+    "colFaixa": "Faixa",
+    "colAtualizacao": "Atualização",
+    "colContato": "Contato",
+    "colAcao": "Ação",
+    "emptyTitle": "Nenhuma vaga encontrada",
+    "emptyBody": "Tente ajustar os filtros ou buscar por outro termo.",
+    "emptySuggestionPrefix": "Você quis dizer",
+    "emptyCTA": "Limpar filtros e ver todas as vagas",
+    "suggestionCTA": "Ver sugestão",
+    "remote": "remoto",
+    "contactMaskedTooltip": "Contato mascarado — LGPD (liberado ao responder no proxy)"
+  },
+  "candidatos": {
+    "title": "Candidatos",
+    "subtitle": "Encontre talentos",
+    "searchPlaceholder": "Analista Cloud",
+    "tableAriaLabel": "Lista de candidatos",
+    "cardsAriaLabel": "Lista de candidatos em cards",
+    "emptyTitle": "Nenhum candidato encontrado",
+    "emptyBody": "Tente ajustar os filtros.",
+    "emptyCTA": "Limpar filtros"
+  },
+  "batchBar": {
+    "candidatar": "Candidatar",
+    "contatar": "Contatar",
+    "selected": "{count} selecionados — limpar",
+    "clear": "limpar — remover todos",
+    "drawerLabel": "drawer de seleção",
+    "openDrawer": "abrir drawer de seleção",
+    "closeDrawer": "fechar drawer",
+    "limitError": "Limite de 10 por lote atingido — máximo 10 por lote",
+    "limitHint": "limite 10 por lote",
+    "batchLabel": "Barra de lote",
+    "counterLabel": "contador de seleção"
+  },
+  "modal": {
+    "close": "Fechar modal",
+    "details": "Detalhes da vaga",
+    "candidateDetails": "Detalhes do candidato",
+    "overlayCloseHint": "Clique fora para fechar sem perder seleção"
+  },
+  "empty": {
+    "noResults": "Nenhum resultado para \"{query}\".",
+    "suggestion": "Você quis dizer \"{suggestion}\"?",
+    "aiSuggestion": "Sugestão IA",
+    "tryAdjust": "Tente ajustar os filtros ou buscar por outro termo",
+    "cta": "Limpar filtros",
+    "ctaVagas": "Ver todas as vagas",
+    "ctaCandidatos": "Ver todos os candidatos"
+  },
+  "errors": {
+    "notFound": "Não encontrado",
+    "expired": "Vaga expirada",
+    "alreadyApplied": "você já se candidatou em {date}"
+  },
+  "a11y": {
+    "skills": "skills",
+    "contactMasked": "contato mascarado",
+    "selectItem": "selecionar-{id}",
+    "lupa": "lupa-{id}",
+    "vacancyCardLabel": "vaga {titulo}",
+    "candidateCardLabel": "candidato {nome}"
+  },
+  "pwa": {
+    "name": "APinfo 2.0",
+    "shortName": "APinfo",
+    "description": "Conector simples Candidatos <-> Empresas"
+  },
+  "currency": {
+    "BRL": "R$",
+    "USD": "$",
+    "EUR": "€"
+  }
+}

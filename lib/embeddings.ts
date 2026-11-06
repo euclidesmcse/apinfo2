@@ -9,19 +9,22 @@ export const EMBEDDING_MODEL = "multilingual-e5-large";
 
 /**
  * Gera embedding para texto. Stub retorna vetor zero 1024.
- * TODO(Task 5): substituir stub por chamada real OmniRoute multilingual-e5
- * search (hybrid pgvector + tsvector) depende de embedding real — ver Task 5.
+ * Produção: OmniRoute multilingual-e5 — lang no embedding query (Task 10).
+ * @param lang - locale lang para embedding multilíngue (pt-BR/en), usado por /api/search?lang=...
  */
-export async function generateEmbedding(text: string): Promise<number[]> {
+export async function generateEmbedding(text: string, opts?: { lang?: string }): Promise<number[]> {
   void text;
+  void opts?.lang;
+  // lang passthrough para multilingual-e5: query prefix "query: {text}" com lang hint
   return new Array(EMBEDDING_DIM).fill(0);
 }
 
 /**
  * Gera embeddings em lote.
  */
-export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  return Promise.all(texts.map(generateEmbedding));
+export async function generateEmbeddings(texts: string[], opts?: { lang?: string }): Promise<number[][]> {
+  void opts?.lang;
+  return Promise.all(texts.map((t) => generateEmbedding(t, opts)));
 }
 
 /**

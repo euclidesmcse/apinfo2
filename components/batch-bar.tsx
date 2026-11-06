@@ -32,6 +32,25 @@ export function BatchBar({ variant = "vagas", onAction }: BatchBarProps) {
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const barRef = React.useRef<HTMLDivElement | null>(null);
 
+  // viewport: não some atrás do teclado virtual (iOS/Android) — visualViewport API
+  const [viewportOffset, setViewportOffset] = React.useState(0);
+  React.useEffect(() => {
+    const vv = (window as any).visualViewport as VisualViewport | undefined;
+    if (!vv) return;
+    const onViewport = () => {
+      // teclado virtual encurta visualViewport.height vs innerHeight — ajusta bottom offset
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setViewportOffset(offset);
+      if (barRef.current) barRef.current.style.bottom = `${offset}px`;
+    };
+    vv.addEventListener("resize", onViewport);
+    vv.addEventListener("scroll", onViewport);
+    return () => {
+      vv.removeEventListener("resize", onViewport);
+      vv.removeEventListener("scroll", onViewport);
+    };
+  }, []);
+
   // subscribe to selectionStore (zustand-like)
   React.useEffect(() => {
     const sync = () => {
@@ -83,6 +102,8 @@ export function BatchBar({ variant = "vagas", onAction }: BatchBarProps) {
   // não renderiza quando vazio? mantém contador acessível mas pode ocultar barra
   // para testes, renderiza sempre com contador (mas com display)
   const visible = count > 0;
+  void visible;
+  void viewportOffset;
 
   return (
     <div

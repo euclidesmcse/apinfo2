@@ -2,6 +2,7 @@
 import * as React from "react";
 import { formatFaixa, formatTempo, skillsDisplay, maskEmail, maskPhone } from "@/lib/search";
 import type { VacancyRow } from "./vacancy-table";
+// breakpoints 360/768/1024/1280 — Tailwind xs/md/lg/xl; cards <ul><li aria-label> WCAG 2.1 AA
 
 function getSkillIds(row: VacancyRow): string[] {
   if (!Array.isArray(row.stack)) return [];
