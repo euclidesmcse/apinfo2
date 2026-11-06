@@ -35,7 +35,7 @@ function suggestLocal(candidate: CandidatePreview): { subject: string; body: str
   const titulo = candidate.titulo ?? "Profissional";
   const skill = (candidate.stack?.[0] as any)?.skillId ?? "Cloud";
   return {
-    subject: `Oportunidade: ${titulo} • ${String(skill).toUpperCase()} — convite via APinfo`,
+    subject: `Oportunidade: ${titulo} • ${String(skill).toUpperCase()} — convite via W2Talent`,
     body: `Olá ${nome},\n\nSeu perfil "${titulo}" chamou atenção — ${skill}. Temos oportunidade remota alinhada.\nGostaria de conversar esta semana? Responda este e-mail (proxy) para liberar contato direto 🔒.`,
   };
 }
@@ -70,7 +70,7 @@ export function ContactBatchModal({
     // se template global preenchido, usa template; senão IA sugere por candidato
     if (subject.trim() || body.trim()) {
       const cand = candidates.find((c) => c.userId === id);
-      const base = cand ? suggestLocal(cand) : { subject: "Oportunidade via APinfo", body: "Olá, temos oportunidade alinhada..." };
+      const base = cand ? suggestLocal(cand) : { subject: "Oportunidade via W2Talent", body: "Olá, temos oportunidade alinhada..." };
       return {
         subject: subject.trim() || base.subject,
         body: body.trim() || base.body,
@@ -239,7 +239,7 @@ export function ContactBatchModal({
 
         {results ? (
           <div role="status" className="mt-4 border rounded p-3 bg-green-50 text-sm">
-            <strong>{results.filter((r:any)=>r.status==="enviado").length} enviados — via proxy id@via.apinfo.com</strong>
+            <strong>{results.filter((r:any)=>r.status==="enviado").length} enviados — via proxy id@via.w2talent.com</strong>
             <ul className="mt-1">
               {results.map((r: any) => (
                 <li key={r.candidateId ?? r.proxyThreadId}>{r.candidateId ?? r.proxyThreadId}: {r.status} {r.proxyThreadId ? `(${r.proxyThreadId})` : ""} {r.subject ? `— ${r.subject}` : ""}</li>

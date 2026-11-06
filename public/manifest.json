@@ -1,6 +1,6 @@
 {
-  "name": "APinfo 2.0",
-  "short_name": "APinfo",
+  "name": "W2Talent",
+  "short_name": "W2Talent",
   "description": "Conector simples Candidatos <-> Empresas",
   "start_url": "/",
   "scope": "/",

@@ -4,8 +4,8 @@
  * Limite: 10 por lote (SELECTION_LIMIT), loteId cross-page, drawer limpar
  */
 // zustand create persist — interface compatível (usa zustand quando disponível)
-export const STORAGE_KEY = "apinfo:selection";
-export const LOTE_KEY = "apinfo:loteId";
+export const STORAGE_KEY = "w2talent:selection";
+export const LOTE_KEY = "w2talent:loteId";
 export const SELECTION_LIMIT = 10;
 export const LIMIT = SELECTION_LIMIT;
 export const MAX = SELECTION_LIMIT;

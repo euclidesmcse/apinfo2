@@ -98,8 +98,8 @@
     "candidateCardLabel": "candidate {nome}"
   },
   "pwa": {
-    "name": "APinfo 2.0",
-    "shortName": "APinfo",
+    "name": "W2Talent",
+    "shortName": "W2Talent",
     "description": "Simple connector Candidates <-> Companies"
   },
   "currency": {

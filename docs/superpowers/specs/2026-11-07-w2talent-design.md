@@ -1,15 +1,15 @@
-# APinfo 2.0 — Design Doc
+# W2Talent — Design Doc
 
 **Data:** 2026-11-07
 **Autor:** Euclides + Muse Spark (brainstorming superpowers)
 **Status:** ✅ APROVADO — pós-builder-check (2026-11-07), pronto para planning
-**Origem:** https://apinfo.com — inspiração (projeto novo, sem vínculo/migração)
+**Origem:** https://apinfo.com (inspiração) → marca própria **W2Talent (w2talent.com)** — projeto novo, sem vínculo/migração
 
 ---
 
 ## 1. Intent e o Porquê
 
-**O que é:** Nova plataforma inspirada no APinfo — conector simples, limpo e inteligente entre dois polos — **Candidatos <-> Empresas** — eliminando a burocracia que faz os dois lados abandonarem. **Não é fork/migração do apinfo.com.** Cliente é usuário da APinfo, sem acesso operacional/base legada. Brand novo, cold start do zero.
+**O que é:** Nova plataforma **W2Talent (w2talent.com)** inspirada no APinfo (apinfo.com) — conector simples, limpo e inteligente entre dois polos — **Candidatos <-> Empresas** — eliminando a burocracia que faz os dois lados abandonarem. **Não é fork/migração do apinfo.com.** Cliente era usuário do APinfo, sem acesso operacional/base legada. Brand novo, cold start do zero.
 
 **Por que agora:** O APinfo atual funciona, mas parou no tempo (ColdFusion `.cfm`, listas textuais, fluxos via Outlook). Candidato clica em 30 vagas e precisa abrir Outlook 30x, copiar subject/corpo, anexar PDF 30x. RH preenche vaga por vaga sem indicadores, sem retorno, convivendo com CVs desatualizados e vagas fantasmas. LinkedIn virou rede social, Gupy virou ATS pesado de 7 etapas. Há espaço para um **anti-Gupy**: tão simples quanto o APinfo original, mas com IA invisível fazendo o trabalho chato.
 
@@ -58,7 +58,7 @@
 ## 4. Approaches Considerados
 
 ### Approach A — Anti-Gupy / Reforma Cirúrgica (RECOMENDADO como Fase 1)
-Mantém alma simples do APinfo, mata as duas burocracias com 1 clique. CV canônico por IA, candidatura 1-clique (sem Outlook), busca semântica + lista limpa + contato em lote via n8n, painel mínimo. **Prós:** valida tese em 6-8 semanas, menor risco, diferenciação máxima. **Contras:** sem ranking super refinado no dia 1.
+Mantém alma simples do W2Talent, mata as duas burocracias com 1 clique. CV canônico por IA, candidatura 1-clique (sem Outlook), busca semântica + lista limpa + contato em lote via n8n, painel mínimo. **Prós:** valida tese em 6-8 semanas, menor risco, diferenciação máxima. **Contras:** sem ranking super refinado no dia 1.
 
 ### Approach B — Matching Vivo + Painel Inteligente (Fase 2)
 Tudo de A + matching ativo diário ("5 perfis novos para sua vaga"), score explicado, dashboard funil/taxa resposta, IA sugerindo subject/corpo. **Prós:** ecossistema que trabalha sozinho, retenção. **Contras:** 2-3x tempo, precisa volume de dados.
@@ -96,7 +96,7 @@ Inclui: **1 (180d), 2 (14d), 3, 4 (B), 6, 8, 9-simples**
 - **1. Higiene CV (cliente aprovou ajuste):** **180 dias** sem atualização → arquiva (some da busca, recupera em 1 clique). Nudges n8n idempotentes: D150 aviso1, D165 aviso2, D175 aviso3 (e-mail + WhatsApp/Telegram se opt-in), D180 arquiva. Purge definitivo (LGPD hard-delete: Postgres + pgvector + logs) após **30 dias arquivado**. Mensagens idempotentes (dedupe por `userId+marco`).
 - **2. Higiene vagas (14d):** vaga padrão **14 dias**, aviso D12, renova +14 com 1 clique, senão expira/arquiva. Sem vaga fantasma. Idempotente.
 - **3. Lista limpa + modal:** §5.2. Colunas fixas: checkbox, identidade, cargo, skills (+2), local/remoto, regime, faixa (ou "—" se não informada), há quanto tempo. Lupa sempre visível.
-- **4. Comunicação — decisão B:** celular obrigatório (OTP) + e-mail obrigatório. Até aceite, **contato via proxy** `id@via.apinfo.com` (e tel proxy se fornecido). **Liberação do contato direto = implícita ao responder no proxy** (resposta conta como consentimento, logado), não exige clique bilateral "Liberar". Pré-resposta, lista mostra e-mail/tel mascarados com cadeado + tooltip LGPD.
+- **4. Comunicação — decisão B:** celular obrigatório (OTP) + e-mail obrigatório. Até aceite, **contato via proxy** `id@via.w2talent.com` (e tel proxy se fornecido). **Liberação do contato direto = implícita ao responder no proxy** (resposta conta como consentimento, logado), não exige clique bilateral "Liberar". Pré-resposta, lista mostra e-mail/tel mascarados com cadeado + tooltip LGPD.
 - **6. Responsivo:** mobile-first, breakpoints 360/768/1024/1280, últimos 2 anos Chrome/Firefox/Safari/Edge + Safari iOS + Chrome Android. Barra de ação sticky não cobre último card nem some atrás do teclado virtual.
 - **8. Canônico aprimorado:** ingestão PDF/DOCX/LinkedIn → IA extrai para schema fixo (§5.4) com **taxonomia fechada ~500 skills + sinônimos** (ex: AWS=Amazon Web Services, .NET). Validação **pelo próprio candidato** em 1 tela preview editável antes de publicar. Mesmo padrão para vaga. Form em branco para quem não tem PDF.
 - **9-simples:** 1-clique e seleção em lote já entregam "tão fácil quanto Tinder" sem swipe.

@@ -6,7 +6,7 @@ export const OTP_TTL_MINUTES = 5;
 export const OTP_BLOCK_MINUTES = 10;
 export const OTP_MAX_ATTEMPTS = 3;
 export const OTP_COOLDOWN_SECONDS = 60;
-export const JWT_COOKIE_NAME = "apinfo_token";
+export const JWT_COOKIE_NAME = "w2talent_token";
 export const JWT_EXPIRES_DAYS = 7;
 export const CONSENT_TYPES = [
   "tratamentoBusca",
@@ -19,7 +19,7 @@ const JWT_SECRET = (() => {
   const s = process.env.JWT_SECRET;
   if (!s) {
     if (process.env.NODE_ENV === "production") throw new Error("JWT_SECRET não configurado em produção");
-    return "dev-secret-change-me-apinfo2-jwt";
+    return "dev-secret-change-me-w2talent-jwt";
   }
   return s;
 })();

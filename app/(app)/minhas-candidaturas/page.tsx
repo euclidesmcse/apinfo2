@@ -29,7 +29,7 @@ export default function MinhasCandidaturasPage() {
   React.useEffect(() => {
     const cid = (() => {
       try {
-        const raw = typeof window !== "undefined" ? window.localStorage.getItem("apinfo:candidateId") : null;
+        const raw = typeof window !== "undefined" ? window.localStorage.getItem("w2talent:candidateId") : null;
         if (raw) return raw.replace(/"/g, "");
       } catch {}
       return "";
@@ -121,7 +121,7 @@ export default function MinhasCandidaturasPage() {
         </table>
       )}
       {/* Client polling via proxy webhook: status atualiza auto quando webhook chega */}
-      <div className="text-xs text-zinc-400">proxy: id@via.apinfo.com — responda o e-mail para liberar contato direto</div>
+      <div className="text-xs text-zinc-400">proxy: id@via.w2talent.com — responda o e-mail para liberar contato direto</div>
     </main>
   );
 }

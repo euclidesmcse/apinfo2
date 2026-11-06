@@ -181,12 +181,12 @@ export function resolveChannel(candidate: HygieneCandidate, now: Date): { channe
 
 // ── envio nudge (mock WABA + e-mail) ────────────────────────────────────
 const WABA_TEMPLATES: Record<string, string> = {
-  D150: "apinfo_nudge_d150_v1",
-  D165: "apinfo_nudge_d165_v1",
-  D175: "apinfo_nudge_d175_v1",
-  D180: "apinfo_arquivado_v1",
-  V_D12: "apinfo_vaga_aviso_d12_v1",
-  V_D14: "apinfo_vaga_arquivada_v1",
+  D150: "w2talent_nudge_d150_v1",
+  D165: "w2talent_nudge_d165_v1",
+  D175: "w2talent_nudge_d175_v1",
+  D180: "w2talent_arquivado_v1",
+  V_D12: "w2talent_vaga_aviso_d12_v1",
+  V_D14: "w2talent_vaga_arquivada_v1",
 };
 
 export async function sendNudge(
@@ -213,7 +213,7 @@ export async function sendNudge(
   }
 
   const to = (candidateOrVacancy as any).email ?? (candidateOrVacancy as any).celular ?? `${userId}@mock.local`;
-  const template = WABA_TEMPLATES[marco] ?? `apinfo_${marco}`;
+  const template = WABA_TEMPLATES[marco] ?? `w2talent_${marco}`;
 
   sentNudges.push({ userId, marco, channel, fallbackFrom: fallbackFrom as any, to, template, date, createdAt: new Date(now) });
 
@@ -444,5 +444,5 @@ export function clearHygieneForTests() {
 
 // helpers para n8n email retry mapping
 export function nudgeTemplateFor(marco: string): string {
-  return WABA_TEMPLATES[marco] ?? `apinfo_${marco}`;
+  return WABA_TEMPLATES[marco] ?? `w2talent_${marco}`;
 }

@@ -69,7 +69,7 @@ describe("Task 6 — Modal Lupa + Seleção Persistente + Barra Sticky Lote", ()
       expect(barSrc).toMatch(/contador|count|selected|Candidatar|Contatar/i);
 
       // preserva após reload: localStorage + re-hydrate
-      const STORAGE_KEY = mod.STORAGE_KEY ?? "apinfo:selection";
+      const STORAGE_KEY = mod.STORAGE_KEY ?? "w2talent:selection";
       const raw = memStorage.getItem(STORAGE_KEY);
       expect(raw).toBeTruthy();
       const parsed = JSON.parse(raw!);

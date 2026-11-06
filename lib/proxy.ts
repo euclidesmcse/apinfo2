@@ -14,7 +14,7 @@
 import * as crypto from "crypto";
 
 // ── Constantes ───────────────────────────────────────────────────────────
-export const PROXY_DOMAIN = process.env.PROXY_DOMAIN || "via.apinfo.com";
+export const PROXY_DOMAIN = process.env.PROXY_DOMAIN || "via.w2talent.com";
 export const DAILY_LIMIT = 30;
 export const BATCH_LIMIT = 10;
 
@@ -196,7 +196,7 @@ export function suggestContactContent(
   if (!hasSubject) {
     // inclui skill/regime hint
     const skillLabel = String(skill).toUpperCase();
-    subject = `Oportunidade: ${titulo} • ${skillLabel} — convite via APinfo`;
+    subject = `Oportunidade: ${titulo} • ${skillLabel} — convite via W2Talent`;
   }
   let body = hasBody ? opts!.body!.trim() : `Olá ${candidate.nome},\n\nSou do time de recrutamento e seu perfil "${titulo}" chamou nossa atenção — especialmente em ${skill}.\nTemos uma oportunidade alinhada ao seu perfil e gostaríamos de conversar.\nVocê tem disponibilidade para um bate-papo esta semana?\n\nResponda este e-mail (thread proxy) para liberar contato direto. Até breve!`;
   if (hasSubject && !hasBody) {

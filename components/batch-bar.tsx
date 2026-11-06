@@ -66,7 +66,7 @@ export function BatchBar({ variant = "vagas", onAction }: BatchBarProps) {
     const unsub = selectionStore.subscribe?.(sync);
     // também escuta storage para cross-tab
     const onStorage = (e: StorageEvent) => {
-      if (e.key && e.key.includes("apinfo:selection")) sync();
+      if (e.key && e.key.includes("w2talent:selection")) sync();
     };
     window.addEventListener("storage", onStorage);
     return () => {

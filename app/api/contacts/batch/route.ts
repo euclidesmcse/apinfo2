@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const uniqueIds = [...new Set(candidateIds.map((v) => String(v).trim()).filter(Boolean))];
 
     // mascarado até envio — lista de candidatos deve ser mascarada antes de resposta
-    // LGPD: proxy id@via.apinfo.com — response libera contato direto (B)
+    // LGPD: proxy id@via.w2talent.com — response libera contato direto (B)
 
     // rate limit 30/dia por RH (companyId)
     const rateKey = String(companyId);

@@ -4,7 +4,7 @@ import { getMessages, getLocale } from "next-intl/server";
 import { defaultLocale } from "@/i18n";
 
 export const metadata: Metadata = {
-  title: "APinfo 2.0",
+  title: "W2Talent",
   description: "Conector simples Candidatos <-> Empresas",
   manifest: "/manifest.json",
   icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },

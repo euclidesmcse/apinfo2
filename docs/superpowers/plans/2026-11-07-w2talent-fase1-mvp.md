@@ -1,4 +1,4 @@
-# APinfo 2.0 Fase 1 — MVP Anti-burocracia Implementation Plan
+# W2Talent Fase 1 — MVP Anti-burocracia Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 15, shadcn/ui, Tailwind, Prisma, Postgres 16+pgvector, next-intl (PT-BR/EN), OmniRoute, n8n, Resend/SES (proxy via.*), OTP 5min
 
-**Spec:** `docs/superpowers/specs/2026-11-07-apinfo-2.0-design.md`
+**Spec:** `docs/superpowers/specs/2026-11-07-w2talent-2.0-design.md`
 
 ## Global Constraints
 
@@ -33,7 +33,7 @@
 ## File Structure
 
 ```
-apinfo2/
+w2talent/
 ├── app/
 │   ├── (public)/page.tsx                  # landing + busca pública vagas
 │   ├── (app)/dashboard/page.tsx
@@ -91,9 +91,9 @@ apinfo2/
 ### Task 1: Scaffold + DB Canônico + Taxonomia
 
 **Files:**
-- Create: `apinfo2/package.json`, `apinfo2/prisma/schema.prisma`, `apinfo2/lib/prisma.ts`, `apinfo2/lib/taxonomy.ts`, `apinfo2/prisma/seed-taxonomy.ts`
-- Create: `apinfo2/app/layout.tsx`, `apinfo2/lib/embeddings.ts` (stub)
-- Test: `apinfo2/tests/schema.test.ts`
+- Create: `w2talent/package.json`, `w2talent/prisma/schema.prisma`, `w2talent/lib/prisma.ts`, `w2talent/lib/taxonomy.ts`, `w2talent/prisma/seed-taxonomy.ts`
+- Create: `w2talent/app/layout.tsx`, `w2talent/lib/embeddings.ts` (stub)
+- Test: `w2talent/tests/schema.test.ts`
 
 **Interfaces:**
 - Consumes: Postgres 16 + pgvector extension
@@ -120,7 +120,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/prisma apinfo2/lib/prisma.ts apinfo2/lib/taxonomy.ts
+git add w2talent/prisma w2talent/lib/prisma.ts w2talent/lib/taxonomy.ts
 git commit -m "feat(db): schema canônico + pgvector + taxonomia 500 skills"
 ```
 
@@ -129,9 +129,9 @@ git commit -m "feat(db): schema canônico + pgvector + taxonomia 500 skills"
 ### Task 2: Auth OTP Celular + LGPD Granular + JWT
 
 **Files:**
-- Create: `apinfo2/lib/auth.ts`, `apinfo2/app/api/auth/otp/route.ts`, `apinfo2/app/api/auth/verify/route.ts`
-- Modify: `apinfo2/prisma/schema.prisma` (se faltar índices otp)
-- Test: `apinfo2/tests/auth.test.ts`
+- Create: `w2talent/lib/auth.ts`, `w2talent/app/api/auth/otp/route.ts`, `w2talent/app/api/auth/verify/route.ts`
+- Modify: `w2talent/prisma/schema.prisma` (se faltar índices otp)
+- Test: `w2talent/tests/auth.test.ts`
 
 **Interfaces:**
 - Consumes: Task1 prisma, taxonomy
@@ -158,7 +158,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/lib/auth.ts apinfo2/app/api/auth
+git add w2talent/lib/auth.ts w2talent/app/api/auth
 git commit -m "feat(auth): OTP 5min + LGPD 4 consentimentos + JWT"
 ```
 
@@ -167,8 +167,8 @@ git commit -m "feat(auth): OTP 5min + LGPD 4 consentimentos + JWT"
 ### Task 3: CV Canônico — Ingestão PDF/DOCX/LinkedIn + IA Extração + Preview 1 Tela
 
 **Files:**
-- Create: `apinfo2/app/api/candidates/route.ts`, `apinfo2/components/cv-preview-form.tsx`, `apinfo2/lib/cv-extract.ts`
-- Test: `apinfo2/tests/cv-canonical.test.ts`
+- Create: `w2talent/app/api/candidates/route.ts`, `w2talent/components/cv-preview-form.tsx`, `w2talent/lib/cv-extract.ts`
+- Test: `w2talent/tests/cv-canonical.test.ts`
 
 **Interfaces:**
 - Consumes: Task1/2, `embeddings.ts`, `taxonomy.ts`, OmniRoute LLM
@@ -196,7 +196,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/lib/cv-extract.ts apinfo2/app/api/candidates apinfo2/components/cv-preview-form.tsx
+git add w2talent/lib/cv-extract.ts w2talent/app/api/candidates w2talent/components/cv-preview-form.tsx
 git commit -m "feat(cv): ingestão + IA canônico + preview 1 tela + embeddings"
 ```
 
@@ -205,8 +205,8 @@ git commit -m "feat(cv): ingestão + IA canônico + preview 1 tela + embeddings"
 ### Task 4: Vaga Canônica + CRUD + Expiração 14d
 
 **Files:**
-- Create: `apinfo2/app/api/vacancies/route.ts`, `apinfo2/app/api/vacancies/[id]/route.ts`, `apinfo2/components/vacancy-form.tsx`
-- Test: `apinfo2/tests/vacancy.test.ts`
+- Create: `w2talent/app/api/vacancies/route.ts`, `w2talent/app/api/vacancies/[id]/route.ts`, `w2talent/components/vacancy-form.tsx`
+- Test: `w2talent/tests/vacancy.test.ts`
 
 **Interfaces:**
 - Consumes: Task1/2, taxonomy
@@ -234,7 +234,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/app/api/vacancies apinfo2/components/vacancy-form.tsx
+git add w2talent/app/api/vacancies w2talent/components/vacancy-form.tsx
 git commit -m "feat(vacancy): CRUD canônico + expiração 14d + renew"
 ```
 
@@ -243,10 +243,10 @@ git commit -m "feat(vacancy): CRUD canônico + expiração 14d + renew"
 ### Task 5: Busca Semântica + Lista Limpa (Tabela/Cards)
 
 **Files:**
-- Create: `apinfo2/lib/search.ts`, `apinfo2/app/api/search/vacancies/route.ts`, `apinfo2/app/api/search/candidates/route.ts`
-- Create: `apinfo2/components/vacancy-table.tsx`, `apinfo2/components/vacancy-cards.tsx`, `apinfo2/components/candidate-table.tsx`, `apinfo2/components/candidate-cards.tsx`
-- Create: `apinfo2/app/vagas/page.tsx`, `apinfo2/app/candidatos/page.tsx`
-- Test: `apinfo2/tests/search.test.ts`
+- Create: `w2talent/lib/search.ts`, `w2talent/app/api/search/vacancies/route.ts`, `w2talent/app/api/search/candidates/route.ts`
+- Create: `w2talent/components/vacancy-table.tsx`, `w2talent/components/vacancy-cards.tsx`, `w2talent/components/candidate-table.tsx`, `w2talent/components/candidate-cards.tsx`
+- Create: `w2talent/app/vagas/page.tsx`, `w2talent/app/candidatos/page.tsx`
+- Test: `w2talent/tests/search.test.ts`
 
 **Interfaces:**
 - Consumes: Task1-4, embeddings.ts, taxonomy
@@ -275,7 +275,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/lib/search.ts apinfo2/components/*table* apinfo2/components/*cards* apinfo2/app/vagas apinfo2/app/candidatos
+git add w2talent/lib/search.ts w2talent/components/*table* w2talent/components/*cards* w2talent/app/vagas w2talent/app/candidatos
 git commit -m "feat(search): busca híbrida + lista limpa tabela/cards"
 ```
 
@@ -284,8 +284,8 @@ git commit -m "feat(search): busca híbrida + lista limpa tabela/cards"
 ### Task 6: Modal Lupa + Seleção Persistente + Barra Sticky Lote
 
 **Files:**
-- Create: `apinfo2/components/detail-modal.tsx`, `apinfo2/components/batch-bar.tsx`, `apinfo2/lib/selection-store.ts` (zustand)
-- Test: `apinfo2/tests/selection.test.ts` (unit + playwright e2e stub)
+- Create: `w2talent/components/detail-modal.tsx`, `w2talent/components/batch-bar.tsx`, `w2talent/lib/selection-store.ts` (zustand)
+- Test: `w2talent/tests/selection.test.ts` (unit + playwright e2e stub)
 
 **Interfaces:**
 - Consumes: Task5 lista
@@ -313,7 +313,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/components/detail-modal.tsx apinfo2/components/batch-bar.tsx apinfo2/lib/selection-store.ts
+git add w2talent/components/detail-modal.tsx w2talent/components/batch-bar.tsx w2talent/lib/selection-store.ts
 git commit -m "feat(ux): modal lupa + seleção cross-page + batch bar sticky"
 ```
 
@@ -322,8 +322,8 @@ git commit -m "feat(ux): modal lupa + seleção cross-page + batch bar sticky"
 ### Task 7: Candidatura em Lote 1-clique (sem Outlook)
 
 **Files:**
-- Create: `apinfo2/app/api/applications/batch/route.ts`, `apinfo2/lib/proxy.ts` (email part), `apinfo2/app/(app)/minhas-candidaturas/page.tsx`
-- Test: `apinfo2/tests/batch-apply.test.ts`
+- Create: `w2talent/app/api/applications/batch/route.ts`, `w2talent/lib/proxy.ts` (email part), `w2talent/app/(app)/minhas-candidaturas/page.tsx`
+- Test: `w2talent/tests/batch-apply.test.ts`
 
 **Interfaces:**
 - Consumes: Task5/6, proxy.ts, auth
@@ -352,7 +352,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/app/api/applications apinfo2/lib/proxy.ts
+git add w2talent/app/api/applications w2talent/lib/proxy.ts
 git commit -m "feat(apply): candidatura lote 1-clique 10/30 + proxy + 207 parcial"
 ```
 
@@ -361,8 +361,8 @@ git commit -m "feat(apply): candidatura lote 1-clique 10/30 + proxy + 207 parcia
 ### Task 8: Contato RH em Lote (1 Template + Preview)
 
 **Files:**
-- Create: `apinfo2/app/api/contacts/batch/route.ts`, `apinfo2/components/contact-batch-modal.tsx`
-- Test: `apinfo2/tests/batch-contact.test.ts`
+- Create: `w2talent/app/api/contacts/batch/route.ts`, `w2talent/components/contact-batch-modal.tsx`
+- Test: `w2talent/tests/batch-contact.test.ts`
 
 **Interfaces:**
 - Consumes: Task5/6/7, proxy.ts, embeddings
@@ -390,7 +390,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/app/api/contacts apinfo2/components/contact-batch-modal.tsx
+git add w2talent/app/api/contacts w2talent/components/contact-batch-modal.tsx
 git commit -m "feat(contact): RH lote 1 template + preview + proxy threads"
 ```
 
@@ -399,8 +399,8 @@ git commit -m "feat(contact): RH lote 1 template + preview + proxy threads"
 ### Task 9: Higiene + Nudges n8n (Idempotente, LGPD Purge)
 
 **Files:**
-- Create: `apinfo2/lib/hygiene.ts`, `apinfo2/app/api/cron/hygiene/route.ts`, `apinfo2/n8n/workflows/hygiene.json`
-- Test: `apinfo2/tests/hygiene.test.ts`
+- Create: `w2talent/lib/hygiene.ts`, `w2talent/app/api/cron/hygiene/route.ts`, `w2talent/n8n/workflows/hygiene.json`
+- Test: `w2talent/tests/hygiene.test.ts`
 
 **Interfaces:**
 - Consumes: Task1 schema, n8n cron
@@ -429,7 +429,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/lib/hygiene.ts apinfo2/app/api/cron apinfo2/n8n
+git add w2talent/lib/hygiene.ts w2talent/app/api/cron w2talent/n8n
 git commit -m "feat(hygiene): cron 180d/14d + 3 nudges idempotentes + purge LGPD"
 ```
 
@@ -438,9 +438,9 @@ git commit -m "feat(hygiene): cron 180d/14d + 3 nudges idempotentes + purge LGPD
 ### Task 10: i18n + Responsivo + Acessibilidade + Polimento
 
 **Files:**
-- Create: `apinfo2/messages/pt-BR.json`, `apinfo2/messages/en.json`, `apinfo2/i18n.ts`
+- Create: `w2talent/messages/pt-BR.json`, `w2talent/messages/en.json`, `w2talent/i18n.ts`
 - Modify: todos components para next-intl, Tailwind breakpoints, radix focus
-- Test: `apinfo2/tests/i18n-a11y.test.ts` + `apinfo2/tests/e2e.spec.ts` (playwright)
+- Test: `w2talent/tests/i18n-a11y.test.ts` + `w2talent/tests/e2e.spec.ts` (playwright)
 
 **Interfaces:**
 - Consumes: Tasks 1-9
@@ -468,7 +468,7 @@ Expected: PASS
 
 - [ ] **Step 5: Commit**
 ```bash
-git add apinfo2/messages apinfo2/i18n.ts apinfo2/app
+git add w2talent/messages w2talent/i18n.ts w2talent/app
 git commit -m "feat(i18n-a11y): PT-BR/EN + responsivo + WCAG AA + PWA"
 ```
 
