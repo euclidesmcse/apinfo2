@@ -468,6 +468,18 @@ export async function searchVacancies(params: SearchParams, dataSource?: any[]):
           });
         }
       } catch {}
+      try {
+        const { DEMO_VACANCIES } = await import("./demo-data");
+        if (DEMO_VACANCIES.length > 0) {
+          return hybridSearch(q, DEMO_VACANCIES as any, {
+            buildText: buildTsvectorTextVacancy,
+            getStack: (v) => v.stack ?? [],
+            filters: params,
+            page,
+            pageSize,
+          });
+        }
+      } catch {}
     }
     if (items.length === 0 && q) {
       const suggestion = suggestCorrection(q);
@@ -499,6 +511,18 @@ export async function searchVacancies(params: SearchParams, dataSource?: any[]):
       if (vacancyStore.size > 0) {
         const demoItems = [...vacancyStore.values()] as any[];
         return hybridSearch(q, demoItems, {
+          buildText: buildTsvectorTextVacancy,
+          getStack: (v) => v.stack ?? [],
+          filters: params,
+          page,
+          pageSize,
+        });
+      }
+    } catch {}
+    try {
+      const { DEMO_VACANCIES } = await import("./demo-data");
+      if (DEMO_VACANCIES.length > 0) {
+        return hybridSearch(q, DEMO_VACANCIES as any, {
           buildText: buildTsvectorTextVacancy,
           getStack: (v) => v.stack ?? [],
           filters: params,
@@ -568,6 +592,18 @@ export async function searchCandidates(params: SearchParams, dataSource?: any[])
           });
         }
       } catch {}
+      try {
+        const { DEMO_CANDIDATES } = await import("./demo-data");
+        if (DEMO_CANDIDATES.length > 0) {
+          return hybridSearch(q, DEMO_CANDIDATES as any, {
+            buildText: buildTsvectorTextCandidate,
+            getStack: (c) => c.stack ?? [],
+            filters: params,
+            page,
+            pageSize,
+          });
+        }
+      } catch {}
     }
     if (q && items.length > 0) {
       return hybridSearch(q, items, {
@@ -589,6 +625,18 @@ export async function searchCandidates(params: SearchParams, dataSource?: any[])
       if (candidateStore.size > 0) {
         const demoItems = [...candidateStore.values()] as any[];
         return hybridSearch(q, demoItems, {
+          buildText: buildTsvectorTextCandidate,
+          getStack: (c) => c.stack ?? [],
+          filters: params,
+          page,
+          pageSize,
+        });
+      }
+    } catch {}
+    try {
+      const { DEMO_CANDIDATES } = await import("./demo-data");
+      if (DEMO_CANDIDATES.length > 0) {
+        return hybridSearch(q, DEMO_CANDIDATES as any, {
           buildText: buildTsvectorTextCandidate,
           getStack: (c) => c.stack ?? [],
           filters: params,
