@@ -1,0 +1,10 @@
+{
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "buildCommand": "npx prisma generate && npm run build",
+  "regions": ["gru1"],
+  "env": {
+    "PROXY_DOMAIN": "via.w2talent.com",
+    "NEXT_PUBLIC_BASE_URL": "https://w2talent.com"
+  }
+}
