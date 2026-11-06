@@ -136,14 +136,22 @@ export function vacancyOrigin(v: HygieneVacancy): Date {
   return v.createdAt ?? new Date();
 }
 
+export function hasAnyHygieneEvent(userId: string, marco: string): boolean {
+  const prefix = `${userId}:${marco}:`;
+  for (const k of hygieneEvents.keys()) if (k.startsWith(prefix)) return true;
+  return false;
+}
+
 export function getCandidateMarco(candidate: HygieneCandidate, now: Date): Marco | null {
   if (candidate.status !== "ativo") return null;
   const origin = candidateOrigin(candidate);
   const d = daysSince(origin, now);
   if (d >= CANDIDATE_ARCHIVE_DAY) return NUDGE_MARCOS.D180;
-  if (d === 175) return NUDGE_MARCOS.D175;
-  if (d === 165) return NUDGE_MARCOS.D165;
-  if (d === 150) return NUDGE_MARCOS.D150;
+  // Nudges use >= with dedupe window so a missed cron day recovers.
+  // Windowed by next marco (150..164, 165..174, 175..179) so D165 doesn't map to overdue D150.
+  if (d >= 150 && d < 165 && !hasAnyHygieneEvent(candidate.userId, NUDGE_MARCOS.D150)) return NUDGE_MARCOS.D150;
+  if (d >= 165 && d < 175 && !hasAnyHygieneEvent(candidate.userId, NUDGE_MARCOS.D165)) return NUDGE_MARCOS.D165;
+  if (d >= 175 && d < CANDIDATE_ARCHIVE_DAY && !hasAnyHygieneEvent(candidate.userId, NUDGE_MARCOS.D175)) return NUDGE_MARCOS.D175;
   return null;
 }
 export function getVacancyMarco(vacancy: HygieneVacancy, now: Date): Marco | null {
@@ -151,7 +159,7 @@ export function getVacancyMarco(vacancy: HygieneVacancy, now: Date): Marco | nul
   const origin = vacancyOrigin(vacancy);
   const d = daysSince(origin, now);
   if (d >= VACANCY_ARCHIVE_DAY) return NUDGE_MARCOS.V_D14;
-  if (d === VACANCY_WARN_DAY) return NUDGE_MARCOS.V_D12;
+  if (d >= VACANCY_WARN_DAY && d < VACANCY_ARCHIVE_DAY && !hasAnyHygieneEvent(vacancy.id, NUDGE_MARCOS.V_D12)) return NUDGE_MARCOS.V_D12;
   return null;
 }
 
@@ -328,10 +336,11 @@ export async function runHygieneCron(now: Date = new Date()): Promise<HygieneSum
     if (!marco) continue;
     if (marco === NUDGE_MARCOS.V_D12) {
       const sent = await sendNudge({ userId: id, id, email: `rh-${id}@empresa.com` } as any, marco, now);
-      void sent;
-      summary.vacancies.warned.push(id);
+      if (!sent.skipped) summary.vacancies.warned.push(id);
     } else if (marco === NUDGE_MARCOS.V_D14) {
-      await sendNudge({ userId: id, id, email: `rh-${id}@empresa.com` } as any, marco, now);
+      const sent = await sendNudge({ userId: id, id, email: `rh-${id}@empresa.com` } as any, marco, now);
+      // Always archive at D14 even if nudge was deduped (idempotency), but count nudge only if sent
+      void sent;
       archiveVacancy(id, now);
       summary.vacancies.archived.push(id);
     }
@@ -358,7 +367,7 @@ export async function runHygieneCron(now: Date = new Date()): Promise<HygieneSum
       else if (d === 165) marco = "D165";
       else if (d === 150) marco = "D150";
       if (marco) {
-        const c: any = { userId: db.userId, email: db.email, celular: db.celular, whatsappOpt: db.whatsappOpt, lastWabaInteractionAt: null };
+        const c: any = { userId: db.userId, email: db.email, celular: db.celular, whatsappOpt: db.whatsappOpt, lastWabaInteractionAt: (db as any).lastWabaInteractionAt ?? (db as any).lastWhatsappAt ?? null };
         const sent = await sendNudge(c, marco, now);
         if (marco === "D180" && !sent.skipped) {
           await (prisma as any).candidateProfile?.update?.({ where: { userId: db.userId }, data: { status: "arquivado" } }).catch(() => {});

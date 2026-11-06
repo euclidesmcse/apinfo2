@@ -284,7 +284,8 @@ export async function hybridSearch<T extends Record<string, any>>(
     queryEmbedding = null;
   }
 
-  // 1. filter status=ativo only
+  // 1. filter status=ativo only — mirrors isSearchableCandidate/Vacancy from lib/hygiene
+  // (arquivado/arquivada must be excluded; use those helpers as source of truth when importing)
   let filtered = items.filter((it) => {
     const status = (it as any).status;
     // if no status field, keep; if status present, must be ativo/ativa

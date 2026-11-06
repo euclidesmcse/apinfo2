@@ -3,7 +3,11 @@ import { runHygieneCron } from "@/lib/hygiene";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // dev fallback (tests)
+  if (!secret) {
+    // Secret not configured: deny in prod, allow only in test or explicit flag
+    if (process.env.NODE_ENV === "test" || process.env.ALLOW_CRON_WITHOUT_SECRET === "true") return true;
+    return false;
+  }
   const auth = req.headers.get("authorization") ?? "";
   const xCron = req.headers.get("x-cron-secret") ?? "";
   const qSecret = req.nextUrl.searchParams.get("cron_secret") ?? "";
@@ -16,6 +20,10 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret && process.env.NODE_ENV !== "test" && process.env.ALLOW_CRON_WITHOUT_SECRET !== "true") {
+    return NextResponse.json({ error: "cron_secret_not_configured" }, { status: 503 });
+  }
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
