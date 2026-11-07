@@ -201,8 +201,6 @@ export async function extractToCanonical(
 
   const stack: CvStackItem[] = skillIds.map((skillId) => ({
     skillId,
-    nivel: "pleno",
-    anos: 3,
   }));
 
   const resumoMatch = trimmed.match(/resumo\s*:?\s*([^\n]+)/i);
