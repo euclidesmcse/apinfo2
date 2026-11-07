@@ -115,6 +115,7 @@ export default function HomePage() {
                 Um clique, dez vagas. Sem Outlook.
               </p>
               <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 22, flexWrap: "wrap" }}>
+                <Link href="/conta" className="ghost">Minha conta</Link>
                 <Link href="/vagas" className="btn-ink">
                   Ver vagas <span aria-hidden>→</span>
                 </Link>
