@@ -1,0 +1,20 @@
+name: Prepare dependency lock
+on:
+  push:
+    branches: [fix/production-readiness]
+    paths: [package.json, .github/workflows/dependency-lock.yml]
+permissions:
+  contents: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: npm audit fix --package-lock-only --ignore-scripts
+        continue-on-error: true
+      - name: Export lockfile for review
+        run: node -e 'console.log("LOCKFILE_BEGIN"); console.log(require("fs").readFileSync("package-lock.json","utf8")); console.log("LOCKFILE_END")'

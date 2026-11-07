@@ -1,20 +1,7 @@
 import * as crypto from "crypto";
-import { otpExpiresAt } from "./hygiene";
-
-// ── Constantes ───────────────────────────────────────────────────────
-export const OTP_TTL_MINUTES = 5;
-export const OTP_BLOCK_MINUTES = 10;
-export const OTP_MAX_ATTEMPTS = 3;
-export const OTP_COOLDOWN_SECONDS = 60;
 export const JWT_COOKIE_NAME = "w2talent_token";
 export const JWT_EXPIRES_DAYS = 7;
-export const CONSENT_TYPES = [
-  "tratamentoBusca",
-  "contatoProxy",
-  "nudges",
-  "iaReescrita",
-] as const;
-
+function httpError(message: string, status: number) { return Object.assign(new Error(message), { status }); }
 function getJwtSecret(): string {
   const s = process.env.JWT_SECRET;
   if (s && Buffer.byteLength(s) >= 32 && !/dummy|change-me/i.test(s)) return s;
@@ -22,43 +9,7 @@ function getJwtSecret(): string {
   throw httpError("JWT_SECRET deve conter pelo menos 32 bytes e não ser um exemplo", 503);
 }
 
-// ── Tipos ────────────────────────────────────────────────────────────
-export type ConsentPayload = {
-  tratamentoBusca: boolean;
-  contatoProxy: boolean;
-  nudges: boolean;
-  iaReescrita: boolean;
-  versao?: number;
-  textos?: string[];
-};
 
-type OtpRecord = {
-  celular: string; // normalized E.164
-  codigoHash: string;
-  codigo: string; // kept for test/debug; prod would not expose
-  expiraEm: Date;
-  createdAt: Date;
-  tentativas: number;
-  bloqueioAte: Date | null;
-};
-
-// in-memory store (MVP). Persist to DB in production via prisma.OtpCode
-const otpStore = new Map<string, OtpRecord>();
-// cooldown tracker: celular -> last request timestamp ms
-const cooldownStore = new Map<string, number>();
-
-// consent logs in-memory fallback
-type ConsentEntry = {
-  userId: string;
-  tipo: string;
-  versao: number;
-  texto: string;
-  baseLegal: string;
-  createdAt: Date;
-};
-const consentStore: ConsentEntry[] = [];
-
-// ── Celular helpers ─────────────────────────────────────────────────
 export function normalizeCelular(raw: string): string {
   if (!raw || typeof raw !== "string") return raw;
   const digits = raw.replace(/\D/g, "");
@@ -82,70 +33,7 @@ export function isValidCelularBR(raw: string): boolean {
   return /^\+55\d{10,11}$/.test(norm);
 }
 
-// ── OTP helpers ─────────────────────────────────────────────────────
-export function generateOtp(): string {
-  // 6 dígitos, sem leading zeros perdidos
-  const n = crypto.randomInt(0, 1_000_000);
-  return String(n).padStart(6, "0");
-}
 
-export function hashOtp(codigo: string): string {
-  return crypto.createHash("sha256").update(codigo + getJwtSecret()).digest("hex");
-}
-
-export function verifyHash(codigo: string, hash: string): boolean {
-  const a = hashOtp(codigo);
-  const b = hash;
-  try {
-    const ba = Buffer.from(a, "utf-8");
-    const bb = Buffer.from(b, "utf-8");
-    if (ba.length !== bb.length) return false;
-    return crypto.timingSafeEqual(ba, bb);
-  } catch {
-    return false;
-  }
-}
-
-export function clearOtpStore(): void {
-  otpStore.clear();
-  cooldownStore.clear();
-}
-
-// ── LGPD consent ────────────────────────────────────────────────────
-export async function logConsent(
-  userId: string,
-  tipo: string,
-  versao: number,
-  texto: string
-): Promise<ConsentEntry> {
-  const entry: ConsentEntry = {
-    userId,
-    tipo,
-    versao,
-    texto,
-    baseLegal: "consentimento",
-    createdAt: new Date(),
-  };
-  consentStore.push(entry);
-  // best-effort DB persist (ignore if no DB)
-  try {
-    const { prisma } = await import("./prisma");
-    await prisma.consentLog
-      .create({
-        data: {
-          userId,
-          tipo,
-          versao,
-          texto,
-          baseLegal: "consentimento",
-        },
-      })
-      .catch(() => {});
-  } catch {}
-  return entry;
-}
-
-// ── JWT helpers ─────────────────────────────────────────────────────
 function base64url(input: string | Buffer): string {
   return Buffer.from(input)
     .toString("base64")
@@ -197,136 +85,7 @@ export function verifyJwt(token: string): Record<string, any> | null {
   }
 }
 
-// ── Auth business ───────────────────────────────────────────────────
 
-function httpError(message: string, status: number): Error & { status: number; statusCode: number } {
-  const e: any = new Error(message);
-  e.status = status;
-  e.statusCode = status;
-  return e;
-}
-
-export function requestOtp(celularRaw: string): OtpRecord {
-  const celular = normalizeCelular(celularRaw);
-  if (!isValidCelularBR(celular)) {
-    throw httpError("celular inválido, use formato E.164 BR (+55...)", 400);
-  }
-  const now = new Date();
-  const last = cooldownStore.get(celular);
-  if (last != null) {
-    const diffSec = (now.getTime() - last) / 1000;
-    if (diffSec < OTP_COOLDOWN_SECONDS) {
-      throw httpError(`cooldown 60s, aguarde ${Math.ceil(OTP_COOLDOWN_SECONDS - diffSec)}s`, 429);
-    }
-  }
-  // bloqueio check: se existe registro bloqueado
-  const existing = otpStore.get(celular);
-  if (existing?.bloqueioAte && now < existing.bloqueioAte) {
-    throw httpError("bloqueado por 10min após 3 tentativas", 429);
-  }
-
-  const codigo = generateOtp();
-  const codigoHash = hashOtp(codigo);
-  const createdAt = new Date(now);
-  const expiraEm = otpExpiresAt(createdAt);
-
-  const rec: OtpRecord = {
-    celular,
-    codigo,
-    codigoHash,
-    expiraEm,
-    createdAt,
-    tentativas: 0,
-    bloqueioAte: null,
-  };
-  otpStore.set(celular, rec);
-  cooldownStore.set(celular, now.getTime());
-
-  // fallback SMS stub — only log OTP in test (never in prod)
-  if (process.env.NODE_ENV === "test") {
-    // eslint-disable-next-line no-console
-    console.log(`[auth] OTP para ${celular}: ${codigo} expira ${expiraEm.toISOString()} (stub SMS)`);
-  }
-  return rec;
-}
-
-function validateConsents(consents: ConsentPayload): void {
-  if (!consents || typeof consents !== "object") {
-    throw httpError(
-      "consentimentos obrigatórios: tratamentoBusca, contatoProxy, nudges, iaReescrita (LGPD granular)",
-      400
-    );
-  }
-  for (const t of CONSENT_TYPES) {
-    if ((consents as any)[t] !== true) {
-      throw httpError(
-        `consentimento obrigatório faltando ou não aceito: ${t} (LGPD granular, 4 flags)`,
-        400
-      );
-    }
-  }
-}
-
-export function verifyOtp(
-  celularRaw: string,
-  codigo: string,
-  consents: ConsentPayload
-): { token: string; userId: string } {
-  const celular = normalizeCelular(celularRaw);
-  if (!isValidCelularBR(celular)) {
-    throw httpError("celular inválido", 400);
-  }
-  const now = new Date();
-  const rec = otpStore.get(celular);
-  if (!rec) {
-    throw httpError("código expirado, reenviar", 410);
-  }
-  // bloqueio ativo
-  if (rec.bloqueioAte && now < rec.bloqueioAte) {
-    throw httpError("bloqueado por 10min após 3 tentativas, aguarde", 429);
-  }
-  // expirou bloqueio? limpa se passou
-  if (rec.bloqueioAte && now >= rec.bloqueioAte) {
-    rec.bloqueioAte = null;
-    rec.tentativas = 0;
-  }
-  // expiração 5min
-  if (now > rec.expiraEm) {
-    // também 410 Review Focus
-    throw httpError("código expirado, reenviar", 410);
-  }
-
-  const ok = verifyHash(codigo, rec.codigoHash);
-  if (!ok) {
-    rec.tentativas += 1;
-    if (rec.tentativas >= OTP_MAX_ATTEMPTS) {
-      rec.bloqueioAte = new Date(now.getTime() + OTP_BLOCK_MINUTES * 60 * 1000);
-      throw httpError("bloqueado por 10min após 3 tentativas", 429);
-    }
-    throw httpError("código inválido", 401);
-  }
-
-  // código correto -> valida consentimentos (só após acerto para não vazar info)
-  validateConsents(consents);
-
-  // sucesso: log consentimentos versionados + limpar OTP
-  const versao = (consents as any).versao ?? 1;
-  const textos: string[] = (consents as any).textos ?? [];
-  for (let i = 0; i < CONSENT_TYPES.length; i++) {
-    const tipo = CONSENT_TYPES[i];
-    const texto = textos[i] ?? `Consentimento ${tipo} v${versao} — LGPD granular`;
-    // fire-and-forget (sync push já; async DB)
-    logConsent(celular, tipo, versao, texto).catch(() => {});
-  }
-
-  otpStore.delete(celular);
-  // keep cooldown but don't block verify; cooldown only for requestOtp
-
-  const token = signJwt({ userId: celular, celular });
-  return { token, userId: celular };
-}
-
-// ── requireAuth ─────────────────────────────────────────────────────
 export function requireAuth(req: Request | { headers: any; cookies?: any }): { userId: string; celular: string; [k: string]: any } {
   let token: string | null = null;
   // headers: Request, NextRequest, ou plain object
