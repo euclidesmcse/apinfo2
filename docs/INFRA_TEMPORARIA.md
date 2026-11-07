@@ -8,6 +8,7 @@
 | Item | Onde está | Como remover |
 |------|-----------|--------------|
 | Container `w2talent-db` | `docker ps --filter name=w2talent-db` | `docker rm -f w2talent-db` ou `./scripts/db.sh down` + remover volume se houver |
+| Database `w2talent_test` (2026-11-07, dentro do `w2talent-db`) | `postgresql://w2talent:w2talent@localhost:5437/w2talent_test` — usado só por `npm test` (testes exigem nome terminado em `_test` e apagam os dados a cada teste) | Some junto com o container; isolado: `docker exec w2talent-db psql -U w2talent -d postgres -c "DROP DATABASE w2talent_test"` |
 | Imagem `pgvector/pgvector:pg16` | `docker images` | `docker rmi pgvector/pgvector:pg16` (após remover container) |
 | Volume (se criado) | `docker volume ls` | `docker volume rm <volume>` |
 | Script `scripts/db.sh` | repo | Remover arquivo + atualizar README quando migrar para Neon/Supabase com pgvector em produção |

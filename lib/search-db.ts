@@ -17,7 +17,8 @@ export async function searchDatabase(kind: "candidate" | "vacancy", params: Sear
   const text = candidate
     ? 'concat_ws(\' \', t.titulo, t.localidade, t.modo, t.stack::text, t."resumo3linhas")'
     : 'concat_ws(\' \', t.titulo, t.localidade, t.regime, t.nivel, t.stack::text, t."descricaoBullets"::text)';
-  let rank = "0";
+  // Empty when there is no text query: a bare "0" in ORDER BY is read by Postgres as a column position (42P10).
+  let rank = "";
   if (q) {
     const query = "plainto_tsquery('simple', " + bind(q) + ")";
     const vector = "to_tsvector('simple', " + text + ")";
@@ -55,7 +56,7 @@ export async function searchDatabase(kind: "candidate" | "vacancy", params: Sear
   const [counts, rows] = await prisma.$transaction([
     prisma.$queryRawUnsafe<Array<{ count: bigint }>>("SELECT COUNT(*) AS count FROM " + table + " t WHERE " + where, ...countValues),
     prisma.$queryRawUnsafe<Array<{ item: any }>>("SELECT " + projection + " AS item FROM " + table + " t WHERE " + where +
-      " ORDER BY " + rank + ' DESC, t."updatedAt" DESC, t.id ASC LIMIT ' + limit + " OFFSET " + offset, ...values),
+      " ORDER BY " + (rank ? rank + " DESC, " : "") + 't."updatedAt" DESC, t.id ASC LIMIT ' + limit + " OFFSET " + offset, ...values),
   ], { isolationLevel: "RepeatableRead" });
   const total = Number(counts[0].count);
   return { items: rows.map(row => row.item), total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)),

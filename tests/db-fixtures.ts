@@ -34,5 +34,6 @@ export function mockDelivery() {
   process.env.EMAIL_FROM = "app@example.test";
   process.env.PROXY_DOMAIN = "via.example.test";
   process.env.WEBHOOK_SECRET = "test-only-isolated-webhook-secret-at-least-32";
-  return jest.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ id: "provider-id" }), { status: 200 }));
+  // A fresh Response per call: a Response body can only be read once, so a shared instance fails from the second send on.
+  return jest.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ id: "provider-id" }), { status: 200 }));
 }
