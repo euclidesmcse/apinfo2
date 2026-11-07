@@ -2,3 +2,11 @@ node_modules/
 .next/
 dist/
 .superpowers/
+
+.env
+.env.*
+!.env.example
+.open-next/
+.wrangler/
+coverage/
+*.tsbuildinfo

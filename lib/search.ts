@@ -288,6 +288,7 @@ export async function hybridSearch<T extends Record<string, any>>(
   // (arquivado/arquivada must be excluded; use those helpers as source of truth when importing)
   let filtered = items.filter((it) => {
     const status = (it as any).status;
+    if (it.expiresAt && new Date(it.expiresAt).getTime() <= Date.now()) return false;
     // if no status field, keep; if status present, must be ativo/ativa
     if (!status) return true;
     return status === "ativo" || status === "ativa";
@@ -413,242 +414,27 @@ export async function hybridSearch<T extends Record<string, any>>(
   };
 }
 
-// ── Public: searchVacancies / searchCandidates (DB-aware fallback) ───────
-export async function searchVacancies(params: SearchParams, dataSource?: any[]): Promise<SearchResult<any>> {
-  // if dataSource provided (tests inject array), use hybridSearch
-  if (Array.isArray(dataSource)) {
-    return hybridSearch(params.q ?? "", dataSource, {
-      buildText: buildTsvectorTextVacancy,
-      getStack: (v) => v.stack ?? [],
-      filters: params,
-      page: params.page,
-      pageSize: params.pageSize,
-    });
-  }
-  // try DB path: build SQL string for audit and then fallback to prisma
-  const q = (params.q ?? "").trim();
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(MAX_PAGE_SIZE, params.pageSize ?? PAGE_SIZE);
-  const offset = (page - 1) * pageSize;
-  let embedding: number[] | null = null;
-  try {
-    embedding = await generateEmbedding(q || "vazio");
-  } catch {
-    embedding = null;
-  }
-  const sql = buildHybridQuerySQL({ ...params, embedding: embedding ?? undefined });
-  void sql;
-  void offset;
-  // attempt prisma query if available
-  try {
-    const { prisma } = await import("./prisma");
-    const where: any = { status: "ativa" };
-    if (params.regime) where.regime = { contains: params.regime, mode: "insensitive" };
-    if (params.localidade) where.localidade = { contains: params.localidade, mode: "insensitive" };
-    const items: any[] = await (prisma as any).vacancy
-      .findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: offset,
-        take: pageSize,
-      })
-      .catch(() => []);
-    // DEMO fallback: se DB vazio mas vacancyStore tem dados (staging sem Postgres), usa in-memory
-    if (items.length === 0) {
-      try {
-        const { vacancyStore } = await import("./proxy");
-        if (vacancyStore.size > 0) {
-          const demoItems = [...vacancyStore.values()] as any[];
-          return hybridSearch(q, demoItems, {
-            buildText: buildTsvectorTextVacancy,
-            getStack: (v) => v.stack ?? [],
-            filters: params,
-            page,
-            pageSize,
-          });
-        }
-      } catch {}
-      try {
-        const { DEMO_VACANCIES } = await import("./demo-data");
-        if (DEMO_VACANCIES.length > 0) {
-          return hybridSearch(q, DEMO_VACANCIES as any, {
-            buildText: buildTsvectorTextVacancy,
-            getStack: (v) => v.stack ?? [],
-            filters: params,
-            page,
-            pageSize,
-          });
-        }
-      } catch {}
-    }
-    if (items.length === 0 && q) {
-      const suggestion = suggestCorrection(q);
-      return {
-        items: [],
-        total: 0,
-        page,
-        pageSize,
-        totalPages: 1,
-        suggestion,
-        emptyCTA: buildEmptyCTA(suggestion),
-        tookMs: 5,
-      };
-    }
-    if (q && items.length > 0) {
-      return hybridSearch(q, items, {
-        buildText: buildTsvectorTextVacancy,
-        getStack: (v) => v.stack ?? [],
-        filters: params,
-        page,
-        pageSize,
-      });
-    }
-    return { items, total: items.length, page, pageSize, totalPages: Math.ceil(items.length / pageSize) || 1, suggestion: null, emptyCTA: null, tookMs: 5 };
-  } catch {
-    // no DB: tenta demo store antes de retornar vazio
-    try {
-      const { vacancyStore } = await import("./proxy");
-      if (vacancyStore.size > 0) {
-        const demoItems = [...vacancyStore.values()] as any[];
-        return hybridSearch(q, demoItems, {
-          buildText: buildTsvectorTextVacancy,
-          getStack: (v) => v.stack ?? [],
-          filters: params,
-          page,
-          pageSize,
-        });
-      }
-    } catch {}
-    try {
-      const { DEMO_VACANCIES } = await import("./demo-data");
-      if (DEMO_VACANCIES.length > 0) {
-        return hybridSearch(q, DEMO_VACANCIES as any, {
-          buildText: buildTsvectorTextVacancy,
-          getStack: (v) => v.stack ?? [],
-          filters: params,
-          page,
-          pageSize,
-        });
-      }
-    } catch {}
-    if (q) {
-      const suggestion = suggestCorrection(q);
-      return {
-        items: [],
-        total: 0,
-        page,
-        pageSize,
-        totalPages: 1,
-        suggestion,
-        emptyCTA: buildEmptyCTA(suggestion),
-        tookMs: 2,
-      };
-    }
-    return { items: [], total: 0, page, pageSize, totalPages: 1, suggestion: null, emptyCTA: null, tookMs: 2 };
-  }
-}
 
+// Production search executes filters and ranking before pagination in PostgreSQL.
+export async function searchVacancies(params: SearchParams, dataSource?: any[]): Promise<SearchResult<any>> {
+  if (dataSource) return hybridSearch(params.q ?? "", dataSource, { buildText: buildTsvectorTextVacancy, filters: params, page: params.page, pageSize: params.pageSize });
+  if (process.env.DEMO_MODE === "true") {
+    const { DEMO_VACANCIES } = await import("./demo-data");
+    return searchVacancies(params, DEMO_VACANCIES);
+  }
+  const { searchDatabase } = await import("./search-db");
+  return searchDatabase("vacancy", params);
+}
 export async function searchCandidates(params: SearchParams, dataSource?: any[]): Promise<SearchResult<any>> {
-  if (Array.isArray(dataSource)) {
-    return hybridSearch(params.q ?? "", dataSource, {
-      buildText: buildTsvectorTextCandidate,
-      getStack: (c) => c.stack ?? [],
-      filters: params,
-      page: params.page,
-      pageSize: params.pageSize,
-    });
+  if (!dataSource && process.env.DEMO_MODE === "true") {
+    const { DEMO_CANDIDATES } = await import("./demo-data");
+    dataSource = DEMO_CANDIDATES;
   }
-  const q = (params.q ?? "").trim();
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(MAX_PAGE_SIZE, params.pageSize ?? PAGE_SIZE);
-  const offset = (page - 1) * pageSize;
-  let embedding: number[] | null = null;
-  try {
-    embedding = await generateEmbedding(q || "vazio");
-  } catch {
-    embedding = null;
+  if (dataSource) {
+    const { publicCandidate } = await import("./public-candidate");
+    const result = await hybridSearch(params.q ?? "", dataSource, { buildText: buildTsvectorTextCandidate, filters: params, page: params.page, pageSize: params.pageSize });
+    return { ...result, items: result.items.map(publicCandidate) };
   }
-  const sql = buildCandidateHybridSQL({ ...params, embedding: embedding ?? undefined });
-  void sql;
-  void offset;
-  try {
-    const { prisma } = await import("./prisma");
-    const where: any = { status: "ativo" };
-    if (params.modo) where.modo = { contains: params.modo, mode: "insensitive" };
-    const items: any[] = await (prisma as any).candidateProfile
-      .findMany({ where, orderBy: { updatedAt: "desc" }, skip: offset, take: pageSize })
-      .catch(() => []);
-    if (items.length === 0) {
-      try {
-        const { candidateStore } = await import("./proxy");
-        if (candidateStore.size > 0) {
-          const demoItems = [...candidateStore.values()] as any[];
-          return hybridSearch(q, demoItems, {
-            buildText: buildTsvectorTextCandidate,
-            getStack: (c) => c.stack ?? [],
-            filters: params,
-            page,
-            pageSize,
-          });
-        }
-      } catch {}
-      try {
-        const { DEMO_CANDIDATES } = await import("./demo-data");
-        if (DEMO_CANDIDATES.length > 0) {
-          return hybridSearch(q, DEMO_CANDIDATES as any, {
-            buildText: buildTsvectorTextCandidate,
-            getStack: (c) => c.stack ?? [],
-            filters: params,
-            page,
-            pageSize,
-          });
-        }
-      } catch {}
-    }
-    if (q && items.length > 0) {
-      return hybridSearch(q, items, {
-        buildText: buildTsvectorTextCandidate,
-        getStack: (c) => c.stack ?? [],
-        filters: params,
-        page,
-        pageSize,
-      });
-    }
-    if (items.length === 0 && q) {
-      const suggestion = suggestCorrection(q);
-      return { items: [], total: 0, page, pageSize, totalPages: 1, suggestion, emptyCTA: buildEmptyCTA(suggestion), tookMs: 5 };
-    }
-    return { items, total: items.length, page, pageSize, totalPages: Math.ceil(items.length / pageSize) || 1, suggestion: null, emptyCTA: null, tookMs: 5 };
-  } catch {
-    try {
-      const { candidateStore } = await import("./proxy");
-      if (candidateStore.size > 0) {
-        const demoItems = [...candidateStore.values()] as any[];
-        return hybridSearch(q, demoItems, {
-          buildText: buildTsvectorTextCandidate,
-          getStack: (c) => c.stack ?? [],
-          filters: params,
-          page,
-          pageSize,
-        });
-      }
-    } catch {}
-    try {
-      const { DEMO_CANDIDATES } = await import("./demo-data");
-      if (DEMO_CANDIDATES.length > 0) {
-        return hybridSearch(q, DEMO_CANDIDATES as any, {
-          buildText: buildTsvectorTextCandidate,
-          getStack: (c) => c.stack ?? [],
-          filters: params,
-          page,
-          pageSize,
-        });
-      }
-    } catch {}
-    if (q) {
-      const suggestion = suggestCorrection(q);
-      return { items: [], total: 0, page, pageSize, totalPages: 1, suggestion, emptyCTA: buildEmptyCTA(suggestion), tookMs: 2 };
-    }
-    return { items: [], total: 0, page, pageSize, totalPages: 1, suggestion: null, emptyCTA: null, tookMs: 2 };
-  }
+  const { searchDatabase } = await import("./search-db");
+  return searchDatabase("candidate", params);
 }

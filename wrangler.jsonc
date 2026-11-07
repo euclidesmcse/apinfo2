@@ -1,0 +1,25 @@
+// Cloudflare Workers config for W2Talent (built by OpenNext: `opennextjs-cloudflare build && opennextjs-cloudflare deploy`).
+// Versioned so the build is reproducible — before this file existed, OpenNext generated a default config on every build.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "w2talent",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-04",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "w2talent"
+    }
+  ],
+  // Variables and secrets live in the Cloudflare dashboard (Settings → Variables). keep_vars stops
+  // `wrangler deploy` from deleting them because they are not listed here.
+  "keep_vars": true,
+  "observability": {
+    "enabled": true
+  }
+}

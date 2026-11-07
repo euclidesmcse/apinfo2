@@ -73,6 +73,10 @@ export function normalizeDescricaoBullets(input: unknown): string[] {
 
 export function validateVacancy(input: any, opts?: { partial?: boolean }): void {
   if (!input || typeof input !== "object") throw httpError("payload inválido", 400);
+  for (const key of ["nivel", "regime", "localidade", "tipoContrato"]) {
+    if (input[key] != null && (typeof input[key] !== "string" || input[key].length > 200)) throw httpError(key + " inválido", 400);
+  }
+  if (input.faixaMoeda != null && !["BRL", "USD", "EUR"].includes(input.faixaMoeda)) throw httpError("Moeda inválida", 400);
   const partial = !!opts?.partial;
   const titulo = typeof input.titulo === "string" ? input.titulo.trim() : "";
   if (!partial) {
@@ -91,10 +95,10 @@ export function validateVacancy(input: any, opts?: { partial?: boolean }): void 
   // faixa opcional — se fornecida, deve ser número (rejeita NaN), e faixaDe <= faixaAte quando ambos numéricos
   const hasDe = input.faixaDe !== undefined && input.faixaDe !== null;
   const hasAte = input.faixaAte !== undefined && input.faixaAte !== null;
-  if (hasDe && (typeof input.faixaDe !== "number" || Number.isNaN(input.faixaDe))) {
+  if (hasDe && (typeof input.faixaDe !== "number" || (!Number.isSafeInteger(input.faixaDe) || input.faixaDe < 0))) {
     throw httpError("faixaDe deve ser número ou null", 422);
   }
-  if (hasAte && (typeof input.faixaAte !== "number" || Number.isNaN(input.faixaAte))) {
+  if (hasAte && (typeof input.faixaAte !== "number" || (!Number.isSafeInteger(input.faixaAte) || input.faixaAte < 0))) {
     throw httpError("faixaAte deve ser número ou null", 422);
   }
   if (hasDe && hasAte && input.faixaDe > input.faixaAte) {
@@ -128,7 +132,7 @@ export function isAlreadyRenewedToday(
   const nextExpiresAt = vacancyExpiresAt(now);
   const lastRenewMs = existing.updatedAt ? new Date(existing.updatedAt as any).getTime() : 0;
   const todayStartMs = utcDayStartMs(now);
-  return lastRenewMs >= todayStartMs && new Date(existing.expiresAt as any).getTime() === nextExpiresAt.getTime();
+  return lastRenewMs >= todayStartMs && new Date(existing.expiresAt as any).getTime() >= todayStartMs + VACANCY_TTL_DAYS * 86400000;
 }
 
 /**

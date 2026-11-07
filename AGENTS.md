@@ -18,7 +18,7 @@ Next.js 15.5 + Tailwind 3.4 + PostCSS + next-intl (PT-BR/EN) + PWA (`manifest.js
 Prisma 6.5 + Postgres `pgvector:pg16` (`vector(1024)` + `tsvector`, hybrid `ts_rank 0.6 + cosine 0.4`).
 Auth OTP 5min (E.164 BR) + JWT `w2talent_token` + LGPD 4 consentimentos versionados.
 Deploy: Cloudflare Pages/Workers via **OpenNext** (`@opennextjs/cloudflare`). Ver seção Deploy abaixo.
-Tests: `npm test -- --runInBand` — 11 suítes, 129 pass, 3 skipped (DATABASE_URL ausente).
+Tests: `npm test -- --runInBand` — 12 suítes, 76 pass contra Postgres real (`DATABASE_URL` deve terminar em `_test`; local: `w2talent_test` no `w2talent-db:5437`).
 
 ## Onde parou (atualizar a cada etapa)
 
@@ -27,7 +27,12 @@ Tests: `npm test -- --runInBand` — 11 suítes, 129 pass, 3 skipped (DATABASE_U
 - **2026-11-06 — Staging live:** Cloudflare Pages `w2talent` no ar em `workers.dev`, auto-deploy em `git push origin main`.
 - **2026-11-06 — DB local:** `w2talent-db` (Docker `pgvector:pg16` porta **5437**) migrado + seed `demo-company` 10 vagas/5 candidatos. Gerenciado por `scripts/db.sh` (ver `docs/INFRA_TEMPORARIA.md` — remover ao final, migrar para Neon/Supabase com pgvector em produção).
 - **2026-11-06 — Visual:** Landing split-stage (taste-skill, Bodoni Moda/Jost, slate/sage/blush/olive) + headers olive/sage em `/vagas` e `/candidatos`. Tela branca sem CSS corrigida (a097ba0). `/` 404 corrigida (f6f2071).
-- Próximo: Fase 1.1 polish (PWA icons, vaul drawer) ou Fase 2 (coach IA, ranking 94%, dashboard RH) — ver spec Fase 2/3.
+- **2026-11-07 — PR #1 `fix/production-readiness` (draft):** segurança/LGPD (ownership de perfil e empresa, busca sem dados privados), persistência (`MailOutbox`, `DailyUsage`, 3 migrations), OTP retorna 503 até escolher provedor SMS, `next-intl` 3→4, CI com Postgres real. CI estava vermelho por 2 bugs — corrigidos: `ORDER BY 0` em `lib/search-db.ts` (busca sem texto) e mock de `fetch` reaproveitando o mesmo `Response` em `tests/db-fixtures.ts`. Local: 12 suítes/76 testes + build OK.
+- **Pendente antes do merge do PR #1 (decisão do Euclides):** o PR remove o fallback demo automático — staging só lista demo com `DEMO_MODE=true` nas Variables da Cloudflare. Decidir: cadastrar `DEMO_MODE=true` ou restaurar fallback automático. PR #1 com CI GitHub verde (95c89b8).
+- **Atenção — CI e Cloudflare da `main` estão vermelhos (achado 2026-11-07):** CI da `main` falha no `npm test` desde ≥ `6430ed2` (testes rodavam contra DB dummy; o CI do PR #1 com Postgres real resolve). Cloudflare Workers Builds falha desde `f8c92aa` — commit **só de `.md`**, check executado 2026-11-07 16:01 UTC → causa provavelmente na **config da Cloudflare**, não no código. Staging segue no ar servindo o deploy de `f41491b`. Precisa do log em Cloudflare → Workers → `w2talent` → Builds para diagnosticar.
+- **2026-11-07 — Config Cloudflare versionada (PR #1):** `wrangler.jsonc` e `open-next.config.ts` nunca tinham sido commitados (OpenNext gerava config default a cada build). Agora no repo + devDeps fixas `@opennextjs/cloudflare@1.20.16` e `wrangler@4.158.0`. `keep_vars: true` preserva as Variables do dashboard no deploy. Build local OK: `npx opennextjs-cloudflare build` → worker 2597 KiB gzip (limite free 3072 KiB — ~15% de folga, vigiar). Checar tamanho sem publicar: `npx wrangler deploy --dry-run --outdir /tmp/x`.
+- **Pendente (docs):** builds aparecem como Cloudflare **Workers Builds**, não Pages — revisar nomenclatura da seção Deploy e do README.
+- Próximo: fechar PR #1 → depois Fase 1.1 polish (PWA icons, vaul drawer) ou Fase 2 (coach IA, ranking 94%, dashboard RH) — ver spec Fase 2/3.
 
 ## Fontes da verdade (ler nesta ordem ao abrir o projeto)
 

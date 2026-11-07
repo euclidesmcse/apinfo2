@@ -28,12 +28,12 @@ describeIntegration("Integration — Postgres (guarded by DATABASE_URL)", () => 
     }
   });
 
-  it("Partial unique index existe para Application (C1) — verifica via pg_indexes", async () => {
+  it("Unique index para vagas não nulas existe para Application (C1) — verifica via pg_indexes", async () => {
     const { PrismaClient } = await import("@prisma/client");
     const prisma = new PrismaClient();
     try {
       const rows = (await prisma.$queryRaw`
-        SELECT indexname FROM pg_indexes WHERE tablename = 'Application' AND indexname = 'Application_candidateId_vacancyId_partial_unique'
+        SELECT indexname FROM pg_indexes WHERE tablename = 'Application' AND indexname = 'Application_candidateId_vacancyId_key'
       `) as Array<{ indexname: string }>;
       // Se migration foi aplicada, índice existe; se ainda não, falha indica que migration precisa rodar
       expect(rows.length).toBe(1);

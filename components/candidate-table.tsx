@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { formatFaixa, formatTempo, skillsDisplay, maskEmail, maskPhone } from "@/lib/search";
+import { formatFaixa, formatTempo, skillsDisplay, maskEmail, maskPhone } from "@/lib/display";
 
 export type CandidateRow = {
   id: string;
