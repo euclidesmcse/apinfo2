@@ -48,6 +48,8 @@ enum PlanType {
 // ── CompanyProfile ───────────────────────────────────────────────────
 model CompanyProfile {
   id               String           @id @default(cuid())
+  ownerUserId      String?          @unique
+  email            String?
   nome             String
   cnpj             String?          @unique
   logoUrl          String?

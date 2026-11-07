@@ -17,15 +17,9 @@ export const CONSENT_TYPES = [
 
 function getJwtSecret(): string {
   const s = process.env.JWT_SECRET;
-  if (s) return s;
-  // Durante `next build` o Cloudflare roda com NODE_ENV=production mas sem secrets ainda injetados
-  // — não quebrar o build, usar fallback apenas para geração estática.
-  // Em runtime real (request), signJwt/verifyJwt vão exigir JWT_SECRET.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.CI) {
-    return "build-dummy-w2talent-jwt-not-for-runtime";
-  }
-  if (process.env.NODE_ENV === "production") throw new Error("JWT_SECRET não configurado em produção");
-  return "dev-secret-change-me-w2talent-jwt";
+  if (s && Buffer.byteLength(s) >= 32 && !/dummy|change-me/i.test(s)) return s;
+  if (process.env.NODE_ENV === "test" && !s) return "test-only-secret-at-least-32-characters";
+  throw httpError("JWT_SECRET deve conter pelo menos 32 bytes e não ser um exemplo", 503);
 }
 
 // ── Tipos ────────────────────────────────────────────────────────────
@@ -169,7 +163,7 @@ export function signJwt(payload: Record<string, unknown>, expiresDays = JWT_EXPI
   const header = { alg: "HS256", typ: "JWT" };
   const nowSec = Math.floor(Date.now() / 1000);
   const expSec = nowSec + expiresDays * 24 * 60 * 60;
-  const fullPayload = { iat: nowSec, exp: expSec, ...payload };
+  const fullPayload = { ...payload, iat: nowSec, exp: expSec, iss: "w2talent", aud: "w2talent" };
   const h = base64url(JSON.stringify(header));
   const p = base64url(JSON.stringify(fullPayload));
   const data = `${h}.${p}`;
@@ -192,9 +186,11 @@ export function verifyJwt(token: string): Record<string, any> | null {
     return null;
   }
   try {
+    const header = JSON.parse(base64urlDecode(h));
+    if (header.alg !== "HS256" || header.typ !== "JWT") return null;
     const payload = JSON.parse(base64urlDecode(p));
     const nowSec = Math.floor(Date.now() / 1000);
-    if (payload.exp && nowSec > payload.exp) return null;
+    if (!Number.isFinite(payload.exp) || nowSec >= payload.exp || payload.iss !== "w2talent" || payload.aud !== "w2talent" || typeof payload.userId !== "string" || !payload.userId) return null;
     return payload;
   } catch {
     return null;
@@ -368,5 +364,5 @@ export function requireAuth(req: Request | { headers: any; cookies?: any }): { u
   if (!payload || !payload.userId) {
     throw httpError("não autorizado: token inválido ou expirado", 401);
   }
-  return payload as any;
+  return { userId: payload.userId, celular: payload.userId };
 }
