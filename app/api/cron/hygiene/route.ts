@@ -1,41 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { runHygieneCron } from "@/lib/hygiene";
-
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    // Secret not configured: deny in prod, allow only in test or explicit flag
-    if (process.env.NODE_ENV === "test" || process.env.ALLOW_CRON_WITHOUT_SECRET === "true") return true;
-    return false;
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  const xCron = req.headers.get("x-cron-secret") ?? "";
-  const qSecret = req.nextUrl.searchParams.get("cron_secret") ?? "";
-  // Bearer <secret> | plain secret | x-cron-secret | ?cron_secret=
-  if (auth === `Bearer ${secret}`) return true;
-  if (auth === secret) return true;
-  if (xCron === secret) return true;
-  if (qSecret === secret) return true;
-  return false;
-}
-
-export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret && process.env.NODE_ENV !== "test" && process.env.ALLOW_CRON_WITHOUT_SECRET !== "true") {
-    return NextResponse.json({ error: "cron_secret_not_configured" }, { status: 503 });
-  }
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  const nowParam = req.nextUrl.searchParams.get("now");
-  const now = nowParam ? new Date(nowParam) : new Date();
-  const summary = await runHygieneCron(now);
-  return NextResponse.json({ ok: true, ...summary }, { status: 200 });
-}
-
-// n8n pode usar POST também
-export async function POST(req: NextRequest) {
-  return GET(req);
-}
-
+import { NextResponse } from "next/server";
+import { runPersistentHygiene } from "@/lib/hygiene-db";
+import { requireService, errorResponse } from "@/lib/api";
 export const dynamic = "force-dynamic";
+export async function GET(req: Request) {
+  try {
+    requireService(req, "CRON_SECRET");
+    return NextResponse.json({ ok: true, ...await runPersistentHygiene() }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return errorResponse(error); }
+}
+export const POST = GET;

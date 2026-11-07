@@ -28,6 +28,8 @@ enum ApplicationOrigin {
 }
 
 enum ApplicationStatus {
+  pendente
+  falha
   enviado
   visualizado
   respondido
@@ -172,8 +174,9 @@ model Application {
   company        CompanyProfile    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   origem         ApplicationOrigin
   proxyThreadId  String            @unique
-  status         ApplicationStatus @default(enviado)
+  status         ApplicationStatus @default(pendente)
   loteId         String?
+  mail           MailOutbox[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -223,4 +226,28 @@ model HygieneEvent {
 
   @@unique([userId, marco, date])
   @@index([userId])
+}
+
+model DailyUsage {
+  actorId String
+  day String
+  count Int @default(0)
+  @@id([actorId, day])
+}
+model MailOutbox {
+  id String @id @default(cuid())
+  applicationId String?
+  application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  dedupeKey String @unique
+  to String
+  subject String
+  body String @db.Text
+  replyTo String?
+  status String @default("pending")
+  attempts Int @default(0)
+  providerId String?
+  createdAt DateTime @default(now())
+  lockedAt DateTime?
+  sentAt DateTime?
+  @@index([status, createdAt])
 }
